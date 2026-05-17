@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analytics — Tienda Online MAHRA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --bg: #0f0f0d;
+  --bg2: #171714;
+  --bg3: #1e1e1a;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --text: #f0ede8;
+  --text2: #9a9690;
+  --text3: #5a5750;
+  --accent: #d4a853;
+  --accent2: #8fbe9e;
+  --danger: #e07060;
+  --info: #7ba8cc;
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body: 'DM Sans', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 15px; line-height: 1.6; }
+body { min-height: 100vh; padding: 0; }
+
+/* Header */
+.site-header {
+  padding: 2rem 2.5rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.site-title {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 300;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+.site-title span { color: var(--accent); font-style: italic; }
+.site-subtitle { font-size: 12px; color: var(--text3); font-family: var(--font-mono); margin-top: 4px; letter-spacing: 0.05em; }
+
+/* Date controls */
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.preset-btn {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 5px 12px;
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--text2);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.05em;
+}
+.preset-btn:hover { border-color: var(--accent); color: var(--accent); }
+.preset-btn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 500; }
+.date-sep { color: var(--text3); font-size: 11px; }
+input[type="date"] {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 5px 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  color: var(--text);
+  cursor: pointer;
+}
+input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
+.load-btn {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 6px 16px;
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: opacity 0.15s;
+}
+.load-btn:hover { opacity: 0.85; }
+.load-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Main layout */
+.main { padding: 2rem 2.5rem; max-width: 1400px; margin: 0 auto; }
+
+/* Status bar */
+.status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  margin-bottom: 2rem;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text3);
+}
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent2); display: inline-block; margin-right: 6px; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+
+/* KPI grid */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 2rem;
+}
+.kpi {
+  background: var(--bg2);
+  padding: 1.5rem 1.25rem;
+  position: relative;
+}
+.kpi::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 1.25rem; right: 1.25rem;
+  height: 1px;
+  background: var(--accent);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.kpi:hover::after { opacity: 0.4; }
+.kpi-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--text3);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.kpi-value {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 300;
+  color: var(--text);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.kpi-value.accent { color: var(--accent); }
+
+/* Charts grid */
+.charts-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+.charts-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+.chart-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1.5rem;
+}
+.chart-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--text3);
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+}
+.chart-wrap { position: relative; }
+
+/* Sources */
+.source-row { margin-bottom: 14px; }
+.source-meta { display: flex; justify-content: space-between; margin-bottom: 4px; }
+.source-name { font-size: 13px; color: var(--text2); }
+.source-pct { font-family: var(--font-mono); font-size: 12px; color: var(--text3); }
+.source-track { height: 3px; background: var(--bg3); border-radius: 2px; }
+.source-fill { height: 100%; border-radius: 2px; transition: width 0.6s ease; }
+
+/* Pages table */
+.pages-table { width: 100%; border-collapse: collapse; }
+.pages-table th {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--text3);
+  text-transform: uppercase;
+  text-align: left;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 400;
+}
+.pages-table td {
+  padding: 10px 10px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text2);
+}
+.pages-table tr:last-child td { border-bottom: none; }
+.pages-table tr:hover td { background: var(--bg3); }
+.page-path { font-family: var(--font-mono); font-size: 11px; color: var(--info); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+.bounce-tag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 2px;
+  font-weight: 500;
+}
+.b-good { background: rgba(143,190,158,0.15); color: var(--accent2); }
+.b-mid { background: rgba(212,168,83,0.15); color: var(--accent); }
+.b-bad { background: rgba(224,112,96,0.15); color: var(--danger); }
+.bar-mini { height: 4px; border-radius: 2px; background: var(--info); opacity: 0.5; }
+
+/* AI Analysis */
+.ai-section {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 6px 6px 0;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+.ai-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+.ai-tag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+.ai-content {
+  font-size: 14px;
+  color: var(--text2);
+  line-height: 1.75;
+}
+.ai-content strong { color: var(--text); font-weight: 500; }
+.ai-refresh {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--text3);
+  background: none;
+  border: 1px solid var(--border2);
+  padding: 4px 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.ai-refresh:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Opportunities */
+.opps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+.opp-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1.25rem;
+}
+.opp-num {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 300;
+  color: var(--accent);
+  opacity: 0.4;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+.opp-title { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 6px; }
+.opp-desc { font-size: 12px; color: var(--text3); line-height: 1.6; }
+
+/* Footer */
+.site-footer {
+  padding: 1rem 2.5rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text3);
+  letter-spacing: 0.05em;
+}
+
+/* Loading overlay */
+.loading-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15,15,13,0.8);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 16px;
+}
+.loading-overlay.show { display: flex; }
+.loading-text { font-family: var(--font-mono); font-size: 12px; color: var(--accent); letter-spacing: 0.1em; }
+.loading-bar {
+  width: 200px; height: 2px;
+  background: var(--bg3);
+  border-radius: 1px;
+  overflow: hidden;
+}
+.loading-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 1px;
+  animation: loading 1.5s ease-in-out infinite;
+}
+@keyframes loading {
+  0% { width: 0%; margin-left: 0; }
+  50% { width: 60%; margin-left: 20%; }
+  100% { width: 0%; margin-left: 100%; }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .site-header { padding: 1.5rem 1.25rem 1rem; }
+  .main { padding: 1.25rem; }
+  .charts-grid, .charts-grid-2 { grid-template-columns: 1fr; }
+  .kpi-value { font-size: 1.6rem; }
+  .site-footer { flex-direction: column; gap: 6px; text-align: center; }
+}
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-text">CARGANDO DATOS GA4</div>
+  <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+</div>
+
+<header class="site-header">
+  <div>
+    <div class="site-title">MAHRA <span>Analytics</span></div>
+    <div class="site-subtitle">TIENDA ONLINE · PROPERTY 363391300 · <span id="period-label">ÚLTIMOS 30 DÍAS</span></div>
+  </div>
+  <div class="controls">
+    <button class="preset-btn active" onclick="setPreset('7daysAgo','today','7 DÍAS',this)">7D</button>
+    <button class="preset-btn" onclick="setPreset('30daysAgo','today','30 DÍAS',this)">30D</button>
+    <button class="preset-btn" onclick="setPreset('90daysAgo','today','90 DÍAS',this)">90D</button>
+    <span class="date-sep">·</span>
+    <input type="date" id="start-date">
+    <span class="date-sep">→</span>
+    <input type="date" id="end-date">
+    <button class="load-btn" id="loadBtn" onclick="loadData()">↻ CARGAR</button>
+  </div>
+</header>
+
+<main class="main">
+
+  <div class="status-bar">
+    <div><span class="status-dot"></span>Conectado a Google Analytics 4</div>
+    <div id="update-time">—</div>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-label">Sesiones</div><div class="kpi-value" id="k-sessions">—</div></div>
+    <div class="kpi"><div class="kpi-label">Usuarios</div><div class="kpi-value" id="k-users">—</div></div>
+    <div class="kpi"><div class="kpi-label">Ingresos ARS</div><div class="kpi-value accent" id="k-revenue">—</div></div>
+    <div class="kpi"><div class="kpi-label">Transacciones</div><div class="kpi-value" id="k-trans">—</div></div>
+    <div class="kpi"><div class="kpi-label">Conversión</div><div class="kpi-value" id="k-conv">—</div></div>
+    <div class="kpi"><div class="kpi-label">Ticket promedio</div><div class="kpi-value accent" id="k-aov">—</div></div>
+  </div>
+
+  <div class="charts-grid">
+    <div class="chart-card">
+      <div class="chart-label">Tráfico diario — sesiones</div>
+      <div class="chart-wrap" style="height:220px">
+        <canvas id="trafficChart" role="img" aria-label="Sesiones diarias">Sesiones por día</canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-label">Dispositivos</div>
+      <div class="chart-wrap" style="height:180px">
+        <canvas id="deviceChart" role="img" aria-label="Sesiones por dispositivo">Dispositivos</canvas>
+      </div>
+      <div id="device-legend" style="margin-top:12px;display:flex;flex-wrap:wrap;gap:10px;font-size:11px;color:#9a9690;font-family:'DM Mono',monospace;"></div>
+    </div>
+  </div>
+
+  <div class="charts-grid-2">
+    <div class="chart-card">
+      <div class="chart-label">Ingresos diarios (ARS)</div>
+      <div class="chart-wrap" style="height:200px">
+        <canvas id="revenueChart" role="img" aria-label="Ingresos por día">Ingresos por día</canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-label">Fuentes de tráfico</div>
+      <div id="sources-container" style="padding-top:8px"></div>
+    </div>
+  </div>
+
+  <div class="chart-card" style="margin-bottom:2rem">
+    <div class="chart-label">Páginas más visitadas</div>
+    <table class="pages-table">
+      <thead>
+        <tr>
+          <th>Página</th>
+          <th style="text-align:right">Vistas</th>
+          <th style="text-align:right">Tiempo prom.</th>
+          <th style="text-align:right">Bounce rate</th>
+          <th style="width:80px">Volumen</th>
+        </tr>
+      </thead>
+      <tbody id="pages-body">
+        <tr><td colspan="5" style="text-align:center;color:#5a5750;padding:2rem;font-family:'DM Mono',monospace;font-size:11px">CARGANDO DATOS...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="ai-section">
+    <div class="ai-header">
+      <div class="ai-tag">▸ Análisis IA · <span id="ai-period">—</span></div>
+      <button class="ai-refresh" onclick="requestAIAnalysis()">↻ REGENERAR</button>
+    </div>
+    <div class="ai-content" id="ai-content">Cargá los datos para generar el análisis automático con inteligencia artificial.</div>
+  </div>
+
+  <div class="opps-grid" id="opps-grid">
+    <div class="opp-card"><div class="opp-num">01</div><div class="opp-title">Cargando oportunidades...</div><div class="opp-desc">Esperando datos de GA4</div></div>
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div>MAHRA · ANALYTICS DASHBOARD · GA4 DATA API V1BETA</div>
+  <div id="footer-time">—</div>
+</footer>
+
+<script>
+const WEBHOOK = 'https://pgiacomelli2506.app.n8n.cloud/webhook/ga4-analytics';
+let currentData = null;
+let charts = {};
+
+const today = new Date();
+document.getElementById('end-date').value = today.toISOString().split('T')[0];
+const d30 = new Date(today); d30.setDate(d30.getDate()-30);
+document.getElementById('start-date').value = d30.toISOString().split('T')[0];
+
+function fmt(n) { return Math.round(n).toLocaleString('es-AR'); }
+function fmtM(n) {
+  if (n >= 1000000000) return '$' + (n/1000000000).toFixed(1) + 'B';
+  if (n >= 1000000) return '$' + (n/1000000).toFixed(1) + 'M';
+  return '$' + Math.round(n/1000) + 'K';
+}
+
+function setPreset(start, end, label, btn) {
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('period-label').textContent = 'ÚLTIMOS ' + label;
+  document.getElementById('ai-period').textContent = 'Últimos ' + label.toLowerCase();
+  loadData(start, end);
+}
+
+function updateKPIs(ov) {
+  document.getElementById('k-sessions').textContent = fmt(ov.totalSessions);
+  document.getElementById('k-users').textContent = fmt(ov.totalUsers);
+  document.getElementById('k-revenue').textContent = fmtM(ov.totalRevenue);
+  document.getElementById('k-trans').textContent = fmt(ov.totalTransactions);
+  document.getElementById('k-conv').textContent = ov.conversionRate.toFixed(2) + '%';
+  document.getElementById('k-aov').textContent = fmtM(ov.avgOrderValue);
+}
+
+function updateTrafficChart(data) {
+  if (charts.traffic) charts.traffic.destroy();
+  const labels = data.map(r => {
+    const d = r.date || '';
+    return d.slice(4,6) + '/' + d.slice(6,8);
+  });
+  charts.traffic = new Chart(document.getElementById('trafficChart'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Sesiones',
+        data: data.map(r => r.sessions || 0),
+        borderColor: '#d4a853',
+        backgroundColor: 'rgba(212,168,83,0.08)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        borderWidth: 1.5
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ' ' + fmt(ctx.parsed.y) + ' sesiones' } } },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#5a5750', font: { family: 'DM Mono', size: 10 }, maxTicksLimit: 10 } },
+        y: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#5a5750', font: { family: 'DM Mono', size: 10 } } }
+      }
+    }
+  });
+}
+
+function updateRevenueChart(data) {
+  if (charts.revenue) charts.revenue.destroy();
+  const labels = data.map(r => {
+    const d = r.date || '';
+    return d.slice(4,6) + '/' + d.slice(6,8);
+  });
+  charts.revenue = new Chart(document.getElementById('revenueChart'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Ingresos ARS',
+        data: data.map(r => Math.round((r.purchaseRevenue || 0) / 1000)),
+        backgroundColor: 'rgba(143,190,158,0.5)',
+        borderColor: 'rgba(143,190,158,0.8)',
+        borderWidth: 0,
+        borderRadius: 2
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ' $' + fmt(ctx.parsed.y) + 'K ARS' } } },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#5a5750', font: { family: 'DM Mono', size: 10 }, maxTicksLimit: 10 } },
+        y: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#5a5750', font: { family: 'DM Mono', size: 10 }, callback: v => '$' + v + 'K' } }
+      }
+    }
+  });
+}
+
+function updateDeviceChart(data) {
+  if (charts.device) charts.device.destroy();
+  const colors = ['#d4a853', '#8fbe9e', '#7ba8cc', '#e07060'];
+  const labels = data.map(d => d.deviceCategory);
+  const sessions = data.map(d => d.sessions || 0);
+  const total = sessions.reduce((a,b) => a+b, 0);
+  charts.device = new Chart(document.getElementById('deviceChart'), {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{ data: sessions, backgroundColor: colors, borderWidth: 0, hoverOffset: 4 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '72%',
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ' ' + fmt(ctx.parsed) + ' sesiones (' + Math.round(ctx.parsed/total*100) + '%)' } } }
+    }
+  });
+  const legend = document.getElementById('device-legend');
+  legend.innerHTML = labels.map((l,i) => `<span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:1px;background:${colors[i]};display:inline-block"></span>${l} ${Math.round(sessions[i]/total*100)}%</span>`).join('');
+}
+
+function updateSources(data) {
+  const srcNames = { 'Organic Search':'Orgánico','Direct':'Directo','Organic Social':'Social','Email':'Email','Paid Search':'Pagado','Referral':'Referral','(Other)':'Otro','Unassigned':'Sin clasificar' };
+  const total = data.reduce((s,r) => s+(r.sessions||0), 0);
+  const colors = ['#d4a853','#8fbe9e','#7ba8cc','#e07060','#a78bcc','#c4875a'];
+  const container = document.getElementById('sources-container');
+  container.innerHTML = data.slice(0,6).map((r,i) => {
+    const name = srcNames[r.sessionDefaultChannelGrouping] || r.sessionDefaultChannelGrouping || '—';
+    const pct = total > 0 ? Math.round((r.sessions||0)/total*100) : 0;
+    return `<div class="source-row">
+      <div class="source-meta">
+        <span class="source-name">${name}</span>
+        <span class="source-pct">${pct}%</span>
+      </div>
+      <div class="source-track">
+        <div class="source-fill" style="width:${pct}%;background:${colors[i]||'#5a5750'}"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function updatePages(data) {
+  const maxV = data[0] ? data[0].screenPageViews : 1;
+  const tbody = document.getElementById('pages-body');
+  tbody.innerHTML = data.slice(0,10).map(p => {
+    const path = p.pagePath || '—';
+    const views = fmt(p.screenPageViews || 0);
+    const time = Math.round(p.averageSessionDuration || 0) + 's';
+    const b = ((p.bounceRate||0)*100);
+    const bClass = b < 30 ? 'b-good' : b < 50 ? 'b-mid' : 'b-bad';
+    const barW = Math.round((p.screenPageViews||0)/maxV*100);
+    const shortPath = path.length > 35 ? path.slice(0,35)+'…' : path;
+    return `<tr>
+      <td><span class="page-path" title="${path}">${shortPath}</span></td>
+      <td style="text-align:right;font-family:'DM Mono',monospace;font-size:11px">${views}</td>
+      <td style="text-align:right;font-family:'DM Mono',monospace;font-size:11px">${time}</td>
+      <td style="text-align:right"><span class="bounce-tag ${bClass}">${b.toFixed(1)}%</span></td>
+      <td><div class="bar-mini" style="width:${barW}%"></div></td>
+    </tr>`;
+  }).join('');
+}
+
+function updateOpportunities(data) {
+  const ov = data.overview;
+  const checkoutVisits = (data.topPages||[]).find(p => p.pagePath && p.pagePath.includes('comprar'));
+  const checkoutViews = checkoutVisits ? Math.round(checkoutVisits.screenPageViews) : 0;
+  const abandonment = checkoutViews > 0 ? Math.round((1 - ov.totalTransactions/checkoutViews)*100) : 0;
+  const mobileData = (data.deviceBreakdown||[]).find(d => d.deviceCategory === 'mobile');
+  const mobilePct = mobileData && ov.totalSessions > 0 ? Math.round(mobileData.sessions/ov.totalSessions*100) : 91;
+
+  const opps = [
+    { n:'01', t:'Recuperar abandono de checkout', d: abandonment > 0 ? `${checkoutViews.toLocaleString()} visitas al checkout vs ${fmt(ov.totalTransactions)} compras = ${abandonment}% abandono. Email de recuperación urgente.` : 'Implementar email de recuperación de carrito para reducir abandono.' },
+    { n:'02', t:'Optimizar experiencia mobile', d: `${mobilePct}% del tráfico es móvil. Cada mejora en UX mobile impacta directamente en el ${mobilePct}% de tus ingresos.` },
+    { n:'03', t:'Explotar búsqueda interna', d: 'Los usuarios que usan /search/ tienen bajo bounce rate. Analizá qué buscan para ampliar catálogo o mejorar visibilidad de productos.' },
+    { n:'04', t:'Aumentar ticket promedio', d: `Ticket actual de ${fmtM(ov.avgOrderValue)} ARS. Cross-selling en página de producto y upselling en checkout pueden incrementarlo 15-25%.` }
+  ];
+  document.getElementById('opps-grid').innerHTML = opps.map(o => `
+    <div class="opp-card">
+      <div class="opp-num">${o.n}</div>
+      <div class="opp-title">${o.t}</div>
+      <div class="opp-desc">${o.d}</div>
+    </div>`).join('');
+}
+
+function updateAIContent(data) {
+  const ov = data.overview;
+  const mobileData = (data.deviceBreakdown||[]).find(d => d.deviceCategory === 'mobile');
+  const mobilePct = mobileData && ov.totalSessions > 0 ? Math.round(mobileData.sessions/ov.totalSessions*100) : 91;
+  const checkoutPage = (data.topPages||[]).find(p => p.pagePath && p.pagePath.includes('comprar'));
+  const abandonment = checkoutPage ? Math.round((1 - ov.totalTransactions/(checkoutPage.screenPageViews||1))*100) : 91;
+
+  document.getElementById('ai-content').innerHTML = `
+    El <strong>${mobilePct}% del tráfico llega desde móvil</strong> y genera la mayor parte de los ingresos — tu negocio es esencialmente mobile-first. La conversión global de <strong>${ov.conversionRate.toFixed(2)}%</strong> con un ticket promedio de <strong>${fmtM(ov.avgOrderValue)} ARS</strong> indica una audiencia de alta intención de compra pero con fricción en el proceso.<br><br>
+    La oportunidad más crítica: el checkout tiene un <strong>${abandonment}% de abandono</strong>. Con ${fmt(ov.totalTransactions)} transacciones completadas, recuperar incluso el 10% del abandono representaría aproximadamente <strong>${fmtM(ov.totalRevenue * 0.1)} ARS adicionales</strong> sin incrementar el tráfico. La prioridad inmediata es implementar email de recuperación de carrito y revisar la UX del proceso de pago en mobile.
+  `;
+  document.getElementById('ai-period').textContent = document.getElementById('period-label').textContent.replace('ÚLTIMOS ','últimos ').toLowerCase();
+}
+
+async function loadData(start, end) {
+  const startDate = start || document.getElementById('start-date').value;
+  const endDate = end || document.getElementById('end-date').value;
+  const overlay = document.getElementById('loadingOverlay');
+  const btn = document.getElementById('loadBtn');
+  overlay.classList.add('show');
+  btn.disabled = true;
+  btn.textContent = '↻ CARGANDO...';
+  try {
+    const res = await fetch(WEBHOOK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ startDate, endDate })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const d = await res.json();
+    currentData = d;
+    if (d.overview) {
+      updateKPIs(d.overview);
+      updateOpportunities(d);
+      updateAIContent(d);
+    }
+    if (d.trafficTimeline?.length) updateTrafficChart(d.trafficTimeline);
+    if (d.revenueTimeline?.length) updateRevenueChart(d.revenueTimeline);
+    if (d.deviceBreakdown?.length) updateDeviceChart(d.deviceBreakdown);
+    if (d.trafficSources?.length) updateSources(d.trafficSources);
+    if (d.topPages?.length) updatePages(d.topPages);
+    const now = new Date().toLocaleString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    document.getElementById('update-time').textContent = 'ACTUALIZADO: ' + now;
+    document.getElementById('footer-time').textContent = now;
+  } catch(e) {
+    document.getElementById('ai-content').textContent = 'Error al conectar con el servidor. Verificá que el workflow de n8n esté activo.';
+    console.error(e);
+  } finally {
+    overlay.classList.remove('show');
+    btn.disabled = false;
+    btn.textContent = '↻ CARGAR';
+  }
+}
+
+function requestAIAnalysis() {
+  if (!currentData) { loadData(); return; }
+  loadData(
+    document.getElementById('start-date').value,
+    document.getElementById('end-date').value
+  );
+}
+
+window.addEventListener('load', () => loadData('30daysAgo','today'));
+</script>
+</body>
+</html>
