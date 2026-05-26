@@ -397,6 +397,10 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
 .utm-num { font-family: var(--font-mono); font-size: 11px; text-align: right; color: var(--text2); white-space: nowrap; }
 .utm-label { font-size: 13px; color: var(--text); }
 .utm-sub { font-family: var(--font-mono); font-size: 11px; color: var(--text3); }
+.pages-table th.sortable { cursor: pointer; user-select: none; transition: color 0.15s; }
+.pages-table th.sortable:hover { color: var(--text2); }
+.pages-table th.sort-active { color: var(--accent); }
+.sort-arrow { font-size: 8px; }
 
 /* Responsive */
 @media (max-width: 768px) {
@@ -534,16 +538,16 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
     <div class="chart-card">
       <div class="chart-label">Detalle por campaña — fuente facebook · utm_campaign</div>
       <div class="table-scroll">
-        <table class="pages-table">
+        <table class="pages-table" id="camp-table">
           <thead><tr>
-            <th>Campaña</th>
-            <th>Tipo</th>
-            <th style="text-align:right">Sesiones</th>
-            <th style="text-align:right">% Nuevos</th>
-            <th style="text-align:right">Add to cart</th>
-            <th style="text-align:right">Transac.</th>
-            <th style="text-align:right">Ingresos</th>
-            <th style="text-align:right">Conv.</th>
+            <th class="sortable" data-key="campana" onclick="sortUTM('camp','campana')">Campaña <span class="sort-arrow"></span></th>
+            <th class="sortable" data-key="tipo" onclick="sortUTM('camp','tipo')">Tipo <span class="sort-arrow"></span></th>
+            <th class="sortable" data-key="sesiones" onclick="sortUTM('camp','sesiones')" style="text-align:right">Sesiones <span class="sort-arrow"></span></th>
+            <th class="sortable" data-key="pct_nuevos" onclick="sortUTM('camp','pct_nuevos')" style="text-align:right">% Nuevos <span class="sort-arrow"></span></th>
+            <th class="sortable" data-key="add_to_carts" onclick="sortUTM('camp','add_to_carts')" style="text-align:right">Add to cart <span class="sort-arrow"></span></th>
+            <th class="sortable" data-key="transacciones" onclick="sortUTM('camp','transacciones')" style="text-align:right">Transac. <span class="sort-arrow"></span></th>
+            <th class="sortable" data-key="ingresos_ars" onclick="sortUTM('camp','ingresos_ars')" style="text-align:right">Ingresos <span class="sort-arrow"></span></th>
+            <th class="sortable" data-key="tasa_conv" onclick="sortUTM('camp','tasa_conv')" style="text-align:right">Conv. <span class="sort-arrow"></span></th>
           </tr></thead>
           <tbody id="camp-body">
             <tr><td colspan="8" style="text-align:center;color:#5a5750;padding:2rem;font-family:'DM Mono',monospace;font-size:11px">SIN CARGAR</td></tr>
@@ -568,17 +572,17 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
     <div class="chart-card">
       <div class="chart-label">Detalle por anuncio — fuente facebook · utm_content</div>
       <div class="table-scroll">
-        <table class="pages-table">
+        <table class="pages-table" id="ad-table">
           <thead><tr>
-            <th>Anuncio</th>
-            <th>Campaña</th>
-            <th>Tipo</th>
-            <th style="text-align:right">Sesiones</th>
-            <th style="text-align:right">% Nuevos</th>
-            <th style="text-align:right">Add to cart</th>
-            <th style="text-align:right">Transac.</th>
-            <th style="text-align:right">Ingresos</th>
-            <th style="text-align:right">Conv.</th>
+            <th class="sortable" data-key="anuncio" onclick="sortUTM('ad','anuncio')">Anuncio <span class="sort-arrow"></span></th>
+            <th class="sortable" data-key="campana" onclick="sortUTM('ad','campana')">Campaña <span class="sort-arrow"></span></th>
+            <th class="sortable" data-key="tipo" onclick="sortUTM('ad','tipo')">Tipo <span class="sort-arrow"></span></th>
+            <th class="sortable" data-key="sesiones" onclick="sortUTM('ad','sesiones')" style="text-align:right">Sesiones <span class="sort-arrow"></span></th>
+            <th class="sortable" data-key="pct_nuevos" onclick="sortUTM('ad','pct_nuevos')" style="text-align:right">% Nuevos <span class="sort-arrow"></span></th>
+            <th class="sortable" data-key="add_to_carts" onclick="sortUTM('ad','add_to_carts')" style="text-align:right">Add to cart <span class="sort-arrow"></span></th>
+            <th class="sortable" data-key="transacciones" onclick="sortUTM('ad','transacciones')" style="text-align:right">Transac. <span class="sort-arrow"></span></th>
+            <th class="sortable" data-key="ingresos_ars" onclick="sortUTM('ad','ingresos_ars')" style="text-align:right">Ingresos <span class="sort-arrow"></span></th>
+            <th class="sortable" data-key="tasa_conv" onclick="sortUTM('ad','tasa_conv')" style="text-align:right">Conv. <span class="sort-arrow"></span></th>
           </tr></thead>
           <tbody id="ad-body">
             <tr><td colspan="9" style="text-align:center;color:#5a5750;padding:2rem;font-family:'DM Mono',monospace;font-size:11px">SIN CARGAR</td></tr>
@@ -620,6 +624,41 @@ let currentRange = {
   start: document.getElementById('start-date').value,
   end: document.getElementById('end-date').value
 };
+let campSort = { key: 'ingresos_ars', dir: 'desc' };
+let adSort = { key: 'ingresos_ars', dir: 'desc' };
+const UTM_NUMERIC = ['sesiones','pct_nuevos','add_to_carts','transacciones','ingresos_ars','tasa_conv'];
+
+function sortRows(rows, st) {
+  const isNum = UTM_NUMERIC.includes(st.key);
+  return [...rows].sort((a, b) => {
+    let d;
+    if (isNum) d = (a[st.key] || 0) - (b[st.key] || 0);
+    else d = String(a[st.key] || '').localeCompare(String(b[st.key] || ''), 'es');
+    return st.dir === 'desc' ? -d : d;
+  });
+}
+
+function sortUTM(which, key) {
+  const st = which === 'camp' ? campSort : adSort;
+  if (st.key === key) st.dir = st.dir === 'desc' ? 'asc' : 'desc';
+  else { st.key = key; st.dir = 'desc'; }
+  if (!utmCache) return;
+  if (which === 'camp') renderCampanias(utmCache.campanias);
+  else renderAnuncios(utmCache.anuncios);
+}
+
+function updateSortIndicators(tableId, st) {
+  document.querySelectorAll('#' + tableId + ' th.sortable').forEach(th => {
+    const arrow = th.querySelector('.sort-arrow');
+    if (th.dataset.key === st.key) {
+      arrow.textContent = st.dir === 'desc' ? '▼' : '▲';
+      th.classList.add('sort-active');
+    } else {
+      arrow.textContent = '';
+      th.classList.remove('sort-active');
+    }
+  });
+}
 
 function setPreset(start, end, label, btn) {
   document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
@@ -717,7 +756,8 @@ function utmTotals(rows) {
 }
 
 function renderCampanias(rows) {
-  const sorted = [...rows].sort((a, b) => (b.sesiones || 0) - (a.sesiones || 0));
+  const sorted = sortRows(rows, campSort);
+  updateSortIndicators('camp-table', campSort);
   const tbody = document.getElementById('camp-body');
   if (!sorted.length) { tbody.innerHTML = utmMsg(8, 'SIN DATOS PARA ESTE RANGO', '#5a5750'); }
   else {
@@ -741,7 +781,8 @@ function renderCampanias(rows) {
 }
 
 function renderAnuncios(rows) {
-  const sorted = [...rows].sort((a, b) => (b.sesiones || 0) - (a.sesiones || 0));
+  const sorted = sortRows(rows, adSort);
+  updateSortIndicators('ad-table', adSort);
   const tbody = document.getElementById('ad-body');
   if (!sorted.length) { tbody.innerHTML = utmMsg(9, 'SIN DATOS PARA ESTE RANGO', '#5a5750'); }
   else {
