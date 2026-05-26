@@ -406,28 +406,11 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
 .kpi-delta.down { color: var(--danger); }
 .kpi-delta.flat { color: var(--text3); }
 
-/* ROAS / Mensajes scorecard */
-.score-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem; }
-.score-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; padding: 1.5rem; }
-.score-card.primary { border-left: 3px solid var(--accent2); }
-.score-pair { display: flex; gap: 1.25rem; align-items: flex-end; }
-.score-block { flex: 1; }
-.score-arrow { font-size: 1.1rem; color: var(--text3); padding-bottom: 0.7rem; }
-.score-lbl { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.05em; color: var(--text3); text-transform: uppercase; margin-bottom: 7px; line-height: 1.3; }
-.score-val { font-family: var(--font-display); font-size: 2.4rem; font-weight: 300; line-height: 1; }
-.score-val.official { color: var(--accent2); }
-.score-val.reference { color: var(--info); }
-.score-sub { font-family: var(--font-mono); font-size: 10px; color: var(--text3); margin-top: 6px; }
-.score-note { font-size: 11px; color: var(--text3); margin-top: 14px; line-height: 1.65; border-top: 1px solid var(--border); padding-top: 12px; }
-.score-note strong { color: var(--text2); font-weight: 500; }
-.tab-note { background: var(--bg2); border: 1px solid var(--border); border-left: 3px solid var(--info); border-radius: 0 6px 6px 0; padding: 1rem 1.25rem; margin-bottom: 2rem; font-size: 12px; color: var(--text3); line-height: 1.6; }
-
 /* Responsive */
 @media (max-width: 768px) {
   .site-header { padding: 1.5rem 1.25rem 1rem; }
   .main { padding: 1.25rem; }
   .charts-grid, .charts-grid-2 { grid-template-columns: 1fr; }
-  .score-grid { grid-template-columns: 1fr; }
   .kpi-value { font-size: 1.6rem; }
   .site-footer { flex-direction: column; gap: 6px; text-align: center; }
   .tab-bar { padding: 0 1rem; overflow-x: auto; }
@@ -464,8 +447,6 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
   <button class="tab-btn" onclick="switchTab('campanias',this)">UTM · Campañas</button>
   <button class="tab-btn" onclick="switchTab('anuncios',this)">UTM · Anuncios</button>
   <button class="tab-btn" onclick="switchTab('meta',this)">Meta · Atribución</button>
-  <button class="tab-btn" onclick="switchTab('roas',this)">ROAS</button>
-  <button class="tab-btn" onclick="switchTab('mensajes',this)">Mensajes</button>
 </nav>
 
 <main class="main">
@@ -579,13 +560,6 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
         </table>
       </div>
     </div>
-    <div class="ai-section">
-      <div class="ai-header">
-        <div class="ai-tag">▸ Análisis IA · <span id="ai-period-camp">—</span></div>
-        <button class="ai-refresh" onclick="loadUTM()">↻ REGENERAR</button>
-      </div>
-      <div class="ai-content" id="ai-content-camp">Cargá los datos para generar el análisis automático.</div>
-    </div>
   </div><!-- /panel-campanias -->
 
   <div id="panel-anuncios" class="tab-panel">
@@ -620,13 +594,6 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
           </tbody>
         </table>
       </div>
-    </div>
-    <div class="ai-section">
-      <div class="ai-header">
-        <div class="ai-tag">▸ Análisis IA · <span id="ai-period-ad">—</span></div>
-        <button class="ai-refresh" onclick="loadUTM()">↻ REGENERAR</button>
-      </div>
-      <div class="ai-content" id="ai-content-ad">Cargá los datos para generar el análisis automático.</div>
     </div>
   </div><!-- /panel-anuncios -->
 
@@ -664,142 +631,7 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
         <div id="meta-timeline-legend" style="margin-top:12px;display:flex;flex-wrap:wrap;gap:14px;font-size:11px;color:#9a9690;font-family:'DM Mono',monospace;"></div>
       </div>
     </div>
-    <div class="ai-section">
-      <div class="ai-header">
-        <div class="ai-tag">▸ Análisis IA · <span id="ai-period-meta">—</span></div>
-        <button class="ai-refresh" onclick="loadMeta()">↻ REGENERAR</button>
-      </div>
-      <div class="ai-content" id="ai-content-meta">Cargá los datos para generar el análisis automático.</div>
-    </div>
   </div><!-- /panel-meta -->
-
-  <div id="panel-roas" class="tab-panel">
-    <div class="utm-head">
-      <div class="utm-title">ROAS <span>Meta Ads · Campañas de ventas</span></div>
-      <div class="utm-meta" id="roas-meta">— sin cargar</div>
-    </div>
-
-    <div class="score-grid">
-      <div class="score-card primary">
-        <div class="chart-label">ROAS · retorno por peso invertido</div>
-        <div class="score-pair">
-          <div class="score-block">
-            <div class="score-lbl">GA4 last-click<br>scorecard oficial</div>
-            <div class="score-val official" id="roas-ga4">—</div>
-            <div class="score-sub">número de decisión</div>
-          </div>
-          <div class="score-arrow">→</div>
-          <div class="score-block">
-            <div class="score-lbl">Meta<br>referencia</div>
-            <div class="score-val reference" id="roas-metaval">—</div>
-            <div class="score-sub" id="roas-brecha">—</div>
-          </div>
-        </div>
-        <div class="score-note">GA4 cuenta solo el <strong>último clic</strong> (piso); Meta cuenta toda asistencia, view-through incluido (techo). El retorno real está en el medio. Para decidir, mirá la <strong>tendencia</strong> del número GA4 período a período, no el valor absoluto.</div>
-      </div>
-      <div class="score-card">
-        <div class="chart-label">CPA · costo por venta (ARS)</div>
-        <div class="score-pair">
-          <div class="score-block">
-            <div class="score-lbl">GA4 last-click<br>scorecard oficial</div>
-            <div class="score-val official" id="cpa-ga4">—</div>
-            <div class="score-sub">número de decisión</div>
-          </div>
-          <div class="score-arrow">↔</div>
-          <div class="score-block">
-            <div class="score-lbl">Meta<br>referencia</div>
-            <div class="score-val reference" id="cpa-metaval">—</div>
-            <div class="score-sub">lente optimista</div>
-          </div>
-        </div>
-        <div class="score-note">Cuánto cuesta conseguir una venta. La lente Meta cuenta más ventas, así que da un CPA más bajo; la de GA4 es más exigente. Compará ambos contra tu <strong>ticket promedio</strong> para ver el margen.</div>
-      </div>
-    </div>
-
-    <div class="kpi-grid" style="margin-bottom:1.5rem">
-      <div class="kpi"><div class="kpi-label">Gasto en ventas</div><div class="kpi-value" id="r-gasto">—</div></div>
-      <div class="kpi"><div class="kpi-label">Revenue GA4 atribuido</div><div class="kpi-value accent" id="r-revga4">—</div></div>
-      <div class="kpi"><div class="kpi-label">Revenue que reporta Meta</div><div class="kpi-value" id="r-revmeta">—</div></div>
-      <div class="kpi"><div class="kpi-label">Transacc. GA4</div><div class="kpi-value" id="r-transga4">—</div></div>
-      <div class="kpi"><div class="kpi-label">Compras Meta</div><div class="kpi-value" id="r-compmeta">—</div></div>
-      <div class="kpi"><div class="kpi-label">Tipo de cambio</div><div class="kpi-value" id="r-tc">—</div></div>
-    </div>
-
-    <div class="chart-card" style="margin-bottom:2rem">
-      <div class="chart-label">Detalle por campaña de ventas — datos Meta</div>
-      <div class="table-scroll">
-        <table class="pages-table" id="roas-table">
-          <thead><tr>
-            <th>Campaña</th>
-            <th style="text-align:right">Gasto USD</th>
-            <th style="text-align:right">Gasto ARS</th>
-            <th style="text-align:right">Revenue Meta</th>
-            <th style="text-align:right">Compras</th>
-            <th style="text-align:right">ROAS Meta</th>
-            <th style="text-align:right">CPA Meta</th>
-          </tr></thead>
-          <tbody id="roas-body">
-            <tr><td colspan="7" style="text-align:center;color:#5a5750;padding:2rem;font-family:'DM Mono',monospace;font-size:11px">SIN CARGAR</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="tab-note">Las campañas de mensajes se miden aparte, en la pestaña Mensajes — su objetivo son conversaciones de WhatsApp, no ventas web, y por eso quedan fuera de este ROAS.</div>
-
-    <div class="ai-section">
-      <div class="ai-header">
-        <div class="ai-tag">▸ Análisis IA · <span id="ai-period-roas">—</span></div>
-        <button class="ai-refresh" onclick="loadROAS()">↻ REGENERAR</button>
-      </div>
-      <div class="ai-content" id="ai-content-roas">Cargá los datos para generar el análisis automático.</div>
-    </div>
-  </div><!-- /panel-roas -->
-
-  <div id="panel-mensajes" class="tab-panel">
-    <div class="utm-head">
-      <div class="utm-title">Mensajes <span>Meta Ads · Campañas de conversación</span></div>
-      <div class="utm-meta" id="msg-meta">— sin cargar</div>
-    </div>
-
-    <div class="tab-note">Estas campañas optimizan conversaciones de WhatsApp e Instagram, no ventas en la web. Se miden con su propia métrica — costo por conversación iniciada — y quedan fuera del ROAS web porque el cierre ocurre en el chat, fuera del tracking de GA4.</div>
-
-    <div class="kpi-grid" style="margin-bottom:1.5rem">
-      <div class="kpi"><div class="kpi-label">Gasto en mensajes</div><div class="kpi-value" id="msg-gasto">—</div></div>
-      <div class="kpi"><div class="kpi-label">Conversaciones iniciadas</div><div class="kpi-value accent" id="msg-conv">—</div></div>
-      <div class="kpi"><div class="kpi-label">Costo x conversación</div><div class="kpi-value accent" id="msg-costo">—</div></div>
-      <div class="kpi"><div class="kpi-label">Clics en enlace</div><div class="kpi-value" id="msg-clics">—</div></div>
-      <div class="kpi"><div class="kpi-label">Campañas activas</div><div class="kpi-value" id="msg-count">—</div></div>
-    </div>
-
-    <div class="chart-card" style="margin-bottom:2rem">
-      <div class="chart-label">Detalle por campaña de mensajes — datos Meta</div>
-      <div class="table-scroll">
-        <table class="pages-table" id="msg-table">
-          <thead><tr>
-            <th>Campaña</th>
-            <th style="text-align:right">Gasto ARS</th>
-            <th style="text-align:right">Conversaciones</th>
-            <th style="text-align:right">Costo x conv.</th>
-            <th style="text-align:right">Clics</th>
-            <th style="text-align:right">Impresiones</th>
-            <th style="text-align:right">Alcance</th>
-          </tr></thead>
-          <tbody id="msg-body">
-            <tr><td colspan="7" style="text-align:center;color:#5a5750;padding:2rem;font-family:'DM Mono',monospace;font-size:11px">SIN CARGAR</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="ai-section">
-      <div class="ai-header">
-        <div class="ai-tag">▸ Análisis IA · <span id="ai-period-msg">—</span></div>
-        <button class="ai-refresh" onclick="loadROAS()">↻ REGENERAR</button>
-      </div>
-      <div class="ai-content" id="ai-content-msg">Cargá los datos para generar el análisis automático.</div>
-    </div>
-  </div><!-- /panel-mensajes -->
 
 </main>
 
@@ -828,11 +660,9 @@ function fmtM(n) {
 /* ---- Pestañas + atribución UTM ---- */
 const UTM_WEBHOOK = 'https://pgiacomelli2506.app.n8n.cloud/webhook/ga4-utm-attribution';
 const META_WEBHOOK = 'https://pgiacomelli2506.app.n8n.cloud/webhook/ga4-meta-attribution';
-const ROAS_WEBHOOK = 'https://pgiacomelli2506.app.n8n.cloud/webhook/ga4-meta-roas';
 let activeTab = 'resumen';
 let utmCache = null;
 let metaCache = null;
-let roasCache = null;
 let currentRange = {
   start: document.getElementById('start-date').value,
   end: document.getElementById('end-date').value
@@ -887,7 +717,6 @@ function setPreset(start, end, label, btn) {
   currentRange = { start: iso(s), end: iso(e) };
   utmCache = null;
   metaCache = null;
-  roasCache = null;
   refresh();
 }
 
@@ -898,14 +727,12 @@ function onCargar() {
   };
   utmCache = null;
   metaCache = null;
-  roasCache = null;
   refresh();
 }
 
 function refresh() {
   if (activeTab === 'resumen') loadData(currentRange.start, currentRange.end);
   else if (activeTab === 'meta') loadMeta();
-  else if (activeTab === 'roas' || activeTab === 'mensajes') loadROAS();
   else loadUTM();
 }
 
@@ -917,7 +744,6 @@ function switchTab(name, btn) {
   document.getElementById('panel-' + name).classList.add('active');
   if ((name === 'campanias' || name === 'anuncios') && !utmCache) loadUTM();
   if (name === 'meta' && !metaCache) loadMeta();
-  if ((name === 'roas' || name === 'mensajes') && !roasCache) loadROAS();
 }
 
 function esc(s) {
@@ -999,7 +825,6 @@ function renderCampanias(rows) {
   document.getElementById('cu-revenue').textContent = fmtM(tot.r);
   document.getElementById('cu-trans').textContent = fmt(tot.t);
   document.getElementById('cu-conv').textContent = tot.s > 0 ? (tot.t / tot.s * 100).toFixed(2) + '%' : '—';
-  narrativeCampanias();
 }
 
 function renderAnuncios(rows) {
@@ -1032,7 +857,6 @@ function renderAnuncios(rows) {
   document.getElementById('au-revenue').textContent = fmtM(tot.r);
   document.getElementById('au-trans').textContent = fmt(tot.t);
   document.getElementById('au-conv').textContent = tot.s > 0 ? (tot.t / tot.s * 100).toFixed(2) + '%' : '—';
-  narrativeAnuncios();
 }
 
 /* ---- Meta Attribution: nuevos vs recurrentes ---- */
@@ -1123,7 +947,6 @@ function renderMeta(cache) {
     '  ·  anterior ' + cache.prev.start + ' → ' + cache.prev.end;
 
   renderMetaTimeline(cache);
-  narrativeMeta();
 }
 
 function renderMetaTimeline(cache) {
@@ -1131,11 +954,6 @@ function renderMetaTimeline(cache) {
   const inRange = (dateStr, s, e) => dateStr >= s.replace(/-/g, '') && dateStr <= e.replace(/-/g, '');
   const desRows = (tl.despues || []).filter(r => inRange(r.date, cache.current.start, cache.current.end)).sort((a, b) => a.date.localeCompare(b.date));
   const antRows = (tl.antes || []).filter(r => inRange(r.date, cache.prev.start, cache.prev.end)).sort((a, b) => a.date.localeCompare(b.date));
-  if (!desRows.length) {
-    if (charts.metaTimeline) { charts.metaTimeline.destroy(); charts.metaTimeline = null; }
-    document.getElementById('meta-timeline-legend').innerHTML = '<span style="color:#e07060">Sin detalle diario disponible para este rango</span>';
-    return;
-  }
   const labels = desRows.map(r => r.date.slice(6, 8) + '/' + r.date.slice(4, 6));
   if (charts.metaTimeline) charts.metaTimeline.destroy();
   charts.metaTimeline = new Chart(document.getElementById('metaTimelineChart'), {
@@ -1378,193 +1196,6 @@ function requestAIAnalysis() {
     document.getElementById('start-date').value,
     document.getElementById('end-date').value
   );
-}
-
-/* ---- ROAS + Mensajes (Fase 3 y 4) ---- */
-function fmtPeriod() {
-  const f = s => { const p = String(s || '').split('-'); return p.length === 3 ? p[2] + '/' + p[1] : s; };
-  return f(currentRange.start) + ' → ' + f(currentRange.end);
-}
-function setText(id, html) { const el = document.getElementById(id); if (el) el.innerHTML = html; }
-function setPeriodSpan(id) { const el = document.getElementById(id); if (el) el.textContent = fmtPeriod(); }
-
-async function loadROAS() {
-  const overlay = document.getElementById('loadingOverlay');
-  const txt = overlay.querySelector('.loading-text');
-  const prev = txt.textContent;
-  txt.textContent = 'CARGANDO ROAS · META × GA4';
-  overlay.classList.add('show');
-  document.getElementById('roas-body').innerHTML = utmMsg(7, 'CARGANDO...', '#5a5750');
-  document.getElementById('msg-body').innerHTML = utmMsg(7, 'CARGANDO...', '#5a5750');
-  try {
-    const res = await fetch(ROAS_WEBHOOK, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ startDate: currentRange.start, endDate: currentRange.end })
-    });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const d = await res.json();
-    roasCache = d;
-    renderROAS(d);
-    renderMensajes(d);
-  } catch(e) {
-    console.error(e);
-    document.getElementById('roas-body').innerHTML = utmMsg(7, 'ERROR DE CONEXIÓN — verificá el workflow n8n', '#e07060');
-    document.getElementById('msg-body').innerHTML = utmMsg(7, 'ERROR DE CONEXIÓN — verificá el workflow n8n', '#e07060');
-    document.getElementById('roas-meta').textContent = 'error de conexión';
-    document.getElementById('msg-meta').textContent = 'error de conexión';
-  } finally {
-    overlay.classList.remove('show');
-    txt.textContent = prev;
-  }
-}
-
-function renderROAS(d) {
-  const v = (d.meta && d.meta.ventas) || {};
-  const g = (d.ga4 && d.ga4.metaPaid) || {};
-  const roas = d.roas || {};
-  const cpa = d.cpa || {};
-  const tc = d.tipoDeCambio || {};
-
-  document.getElementById('roas-ga4').textContent = (roas.ga4LastClick || 0).toFixed(2) + '×';
-  document.getElementById('roas-metaval').textContent = (roas.meta || 0).toFixed(2) + '×';
-  document.getElementById('roas-brecha').textContent = 'Meta reporta +' + (roas.brechaPct || 0).toFixed(0) + '%';
-  document.getElementById('cpa-ga4').textContent = '$' + fmt(cpa.ga4_ars || 0);
-  document.getElementById('cpa-metaval').textContent = '$' + fmt(cpa.meta_ars || 0);
-
-  document.getElementById('r-gasto').textContent = fmtM(v.gasto_ars || 0);
-  document.getElementById('r-revga4').textContent = fmtM(g.ingresos_ars || 0);
-  document.getElementById('r-revmeta').textContent = fmtM(v.revenue_meta_ars || 0);
-  document.getElementById('r-transga4').textContent = fmt(g.transacciones || 0);
-  document.getElementById('r-compmeta').textContent = fmt(v.compras_meta || 0);
-  document.getElementById('r-tc').textContent = '$' + fmt(tc.efectivo || 0);
-
-  const camps = v.campanias || [];
-  const tbody = document.getElementById('roas-body');
-  if (!camps.length) {
-    tbody.innerHTML = utmMsg(7, 'SIN DATOS PARA ESTE RANGO', '#5a5750');
-  } else {
-    tbody.innerHTML = camps.map(c => `<tr>
-      <td><span class="utm-label">${esc(c.campana)}</span></td>
-      <td class="utm-num">$${fmt(c.gasto_usd || 0)}</td>
-      <td class="utm-num">${fmtM(c.gasto_ars || 0)}</td>
-      <td class="utm-num">${fmtM(c.revenue_meta_ars || 0)}</td>
-      <td class="utm-num">${fmt(c.compras_meta || 0)}</td>
-      <td class="utm-num" style="color:var(--info)">${(c.roas_meta || 0).toFixed(2)}×</td>
-      <td class="utm-num" style="color:var(--accent)">$${fmt(c.cpa_meta_ars || 0)}</td>
-    </tr>`).join('');
-  }
-
-  const per = d.periodo ? (d.periodo.desde + ' → ' + d.periodo.hasta) : fmtPeriod();
-  document.getElementById('roas-meta').textContent = per + '  ·  TC ' + (tc.fuente || 'oficial +4%');
-  setText('ai-content-roas', narrativeRoas(d));
-  setPeriodSpan('ai-period-roas');
-}
-
-function renderMensajes(d) {
-  const m = (d.meta && d.meta.mensajes) || {};
-  document.getElementById('msg-gasto').textContent = fmtM(m.gasto_ars || 0);
-  document.getElementById('msg-conv').textContent = fmt(m.conversaciones || 0);
-  document.getElementById('msg-costo').textContent = '$' + fmt(m.costo_conv_ars || 0);
-  document.getElementById('msg-clics').textContent = fmt(m.clics || 0);
-
-  const camps = m.campanias || [];
-  document.getElementById('msg-count').textContent = camps.length;
-  const tbody = document.getElementById('msg-body');
-  if (!camps.length) {
-    tbody.innerHTML = utmMsg(7, 'SIN DATOS PARA ESTE RANGO', '#5a5750');
-  } else {
-    tbody.innerHTML = camps.map(c => `<tr>
-      <td><span class="utm-label">${esc(c.campana)}</span></td>
-      <td class="utm-num">${fmtM(c.gasto_ars || 0)}</td>
-      <td class="utm-num" style="color:var(--accent)">${fmt(c.conversaciones || 0)}</td>
-      <td class="utm-num">$${fmt(c.costo_conv_ars || 0)}</td>
-      <td class="utm-num">${fmt(c.clics_enlace || 0)}</td>
-      <td class="utm-num">${fmt(c.impresiones || 0)}</td>
-      <td class="utm-num">${fmt(c.alcance || 0)}</td>
-    </tr>`).join('');
-  }
-
-  const per = d.periodo ? (d.periodo.desde + ' → ' + d.periodo.hasta) : fmtPeriod();
-  document.getElementById('msg-meta').textContent = per + '  ·  ' + camps.length + ' campañas';
-  setText('ai-content-msg', narrativeMensajes(d));
-  setPeriodSpan('ai-period-msg');
-}
-
-/* ---- Narrativas (análisis templado por panel) ---- */
-function narrativeRoas(d) {
-  const roas = d.roas || {}, cpa = d.cpa || {}, v = (d.meta && d.meta.ventas) || {}, g = (d.ga4 && d.ga4.metaPaid) || {};
-  const rGa4 = roas.ga4LastClick || 0, rMeta = roas.meta || 0;
-  const top = (v.campanias || [])[0];
-  let txt = `Con <strong>$${fmt(v.gasto_ars || 0)} ARS</strong> invertidos en campañas de venta, el scorecard oficial (GA4 last-click) marca un ROAS de <strong>${rGa4.toFixed(2)}×</strong> — por cada peso, ${rGa4.toFixed(2)} de retorno medible por último clic sobre ${fmt(g.transacciones || 0)} transacciones. Meta reporta ${rMeta.toFixed(2)}× porque cuenta toda asistencia; el retorno real está entre ambos números.`;
-  txt += `<br><br>El costo por venta va de <strong>$${fmt(cpa.meta_ars || 0)}</strong> (lente Meta) a <strong>$${fmt(cpa.ga4_ars || 0)} ARS</strong> (lente GA4). `;
-  if (top) txt += `La campaña <strong>${esc(top.campana)}</strong> concentra la mayor inversión, con un ROAS-Meta de ${(top.roas_meta || 0).toFixed(2)}×. `;
-  txt += `La decisión no pasa por el valor exacto sino por la <strong>tendencia</strong>: si el ROAS-GA4 sube período a período, Meta está mejorando su rendimiento real.`;
-  return txt;
-}
-
-function narrativeMensajes(d) {
-  const m = (d.meta && d.meta.mensajes) || {};
-  const camps = (m.campanias || []).filter(c => (c.conversaciones || 0) > 0);
-  let best = null, worst = null;
-  camps.forEach(c => {
-    if (!best || c.costo_conv_ars < best.costo_conv_ars) best = c;
-    if (!worst || c.costo_conv_ars > worst.costo_conv_ars) worst = c;
-  });
-  let txt = `Las campañas de mensajes generaron <strong>${fmt(m.conversaciones || 0)} conversaciones</strong> de WhatsApp/Instagram con una inversión de $${fmt(m.gasto_ars || 0)} ARS, a un costo promedio de <strong>$${fmt(m.costo_conv_ars || 0)} por conversación</strong>.`;
-  if (best && worst && best !== worst) {
-    txt += `<br><br>La más eficiente es <strong>${esc(best.campana)}</strong> ($${fmt(best.costo_conv_ars)}/conv.) y la más cara <strong>${esc(worst.campana)}</strong> ($${fmt(worst.costo_conv_ars)}/conv.) — una brecha de ${Math.round((worst.costo_conv_ars / Math.max(best.costo_conv_ars, 1)))}× que conviene revisar para reasignar presupuesto hacia lo que rinde.`;
-  }
-  txt += `<br><br>Estas conversaciones no aparecen en el ROAS web: su valor se concreta en el cierre por chat, fuera del tracking de GA4. El número a vigilar acá es el costo por conversación.`;
-  return txt;
-}
-
-function narrativeCampanias() {
-  if (!utmCache) return;
-  const rows = utmCache.campanias || [];
-  if (!rows.length) { setText('ai-content-camp', 'Sin datos de campañas para este rango.'); setPeriodSpan('ai-period-camp'); return; }
-  const tot = utmTotals(rows);
-  const top = [...rows].sort((a, b) => (b.ingresos_ars || 0) - (a.ingresos_ars || 0))[0];
-  const convMedia = tot.s > 0 ? (tot.t / tot.s * 100) : 0;
-  let txt = `${rows.length} campañas de Meta trajeron <strong>${fmt(tot.s)} sesiones</strong> e ingresos por <strong>${fmtM(tot.r)} ARS</strong> según atribución GA4 last-click.`;
-  if (top) {
-    const pct = tot.r > 0 ? Math.round((top.ingresos_ars || 0) / tot.r * 100) : 0;
-    txt += ` La campaña <strong>${esc(top.campana)}</strong> concentra el ${pct}% de los ingresos atribuidos.`;
-  }
-  txt += `<br><br>La conversión media del tráfico de campañas es <strong>${convMedia.toFixed(2)}%</strong>. Estos valores son el piso last-click — el aporte real de cada campaña es mayor, pero sirven como vara estable para comparar campañas entre sí y seguir su evolución.`;
-  setText('ai-content-camp', txt);
-  setPeriodSpan('ai-period-camp');
-}
-
-function narrativeAnuncios() {
-  if (!utmCache) return;
-  const rows = (utmCache.anuncios || []).filter(a => a.anuncio && a.anuncio !== '(not set)' && a.anuncio !== '(sin content)');
-  const all = utmCache.anuncios || [];
-  if (!all.length) { setText('ai-content-ad', 'Sin datos de anuncios para este rango.'); setPeriodSpan('ai-period-ad'); return; }
-  const tot = utmTotals(all);
-  const top = [...rows].sort((a, b) => (b.ingresos_ars || 0) - (a.ingresos_ars || 0))[0];
-  let txt = `${all.length} anuncios identificados por utm_content sumaron <strong>${fmt(tot.s)} sesiones</strong> y <strong>${fmtM(tot.r)} ARS</strong> de ingresos atribuidos.`;
-  if (top) txt += ` El anuncio <strong>${esc(top.anuncio)}</strong> es el de mayor ingreso atribuido del período.`;
-  const sinContent = all.length - rows.length;
-  if (sinContent > 0) txt += `<br><br>Hay ${sinContent} fila(s) sin utm_content definido — son anuncios sin el parámetro cargado. A medida que migres los anuncios al estándar de UTM, este detalle se vuelve más preciso.`;
-  else txt += `<br><br>Todos los anuncios tienen utm_content cargado, así que el detalle a nivel anuncio es confiable para este rango.`;
-  setText('ai-content-ad', txt);
-  setPeriodSpan('ai-period-ad');
-}
-
-function narrativeMeta() {
-  if (!metaCache) return;
-  const ps = metaCache.data.paidSocial || {};
-  const des = ps.despues || {};
-  const pctNew = des.pctNuevos || 0;
-  const cn = des.tasaConvNuevos || 0, cr = des.tasaConvRecurrentes || 0;
-  let txt = `El <strong>${pctNew.toFixed(1)}%</strong> del tráfico de Meta (Paid Social) son visitantes nuevos. `;
-  if (cr > cn) txt += `Los recurrentes convierten mejor — <strong>${cr.toFixed(2)}%</strong> vs ${cn.toFixed(2)}% de los nuevos: Meta funciona como motor de recompra, la primera visita rara vez cierra y la vuelta sí.`;
-  else if (cn > cr) txt += `Los nuevos convierten <strong>${cn.toFixed(2)}%</strong> vs ${cr.toFixed(2)}% de los recurrentes — el primer impacto rinde fuerte en este período.`;
-  else txt += `Nuevos y recurrentes convierten parejo (${cn.toFixed(2)}% vs ${cr.toFixed(2)}%).`;
-  txt += `<br><br>La lectura para decidir: si el % de nuevos cae sostenido, Meta está re-impactando a la misma audiencia; si sube, está ampliando alcance real. Cruzá esto con el ROAS para ver si ese alcance se traduce en ventas.`;
-  setText('ai-content-meta', txt);
-  setPeriodSpan('ai-period-meta');
 }
 
 window.addEventListener('load', () => loadData('30daysAgo','today'));
