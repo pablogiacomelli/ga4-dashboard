@@ -401,6 +401,10 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
 .pages-table th.sortable:hover { color: var(--text2); }
 .pages-table th.sort-active { color: var(--accent); }
 .sort-arrow { font-size: 8px; }
+.kpi-delta { font-family: var(--font-mono); font-size: 10px; margin-top: 6px; letter-spacing: 0.03em; }
+.kpi-delta.up { color: var(--accent2); }
+.kpi-delta.down { color: var(--danger); }
+.kpi-delta.flat { color: var(--text3); }
 
 /* Responsive */
 @media (max-width: 768px) {
@@ -442,6 +446,7 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
   <button class="tab-btn active" onclick="switchTab('resumen',this)">Resumen general</button>
   <button class="tab-btn" onclick="switchTab('campanias',this)">UTM · Campañas</button>
   <button class="tab-btn" onclick="switchTab('anuncios',this)">UTM · Anuncios</button>
+  <button class="tab-btn" onclick="switchTab('meta',this)">Meta · Atribución</button>
 </nav>
 
 <main class="main">
@@ -592,6 +597,42 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
     </div>
   </div><!-- /panel-anuncios -->
 
+  <div id="panel-meta" class="tab-panel">
+    <div class="utm-head">
+      <div class="utm-title">Meta <span>Nuevos vs Recurrentes</span></div>
+      <div class="utm-meta" id="meta-meta">— sin cargar</div>
+    </div>
+    <div class="kpi-grid" style="margin-bottom:1.5rem">
+      <div class="kpi"><div class="kpi-label">Sesiones Meta</div><div class="kpi-value" id="m-sessions">—</div><div class="kpi-delta" id="m-sessions-d"></div></div>
+      <div class="kpi"><div class="kpi-label">% Nuevos</div><div class="kpi-value" id="m-pctnew">—</div><div class="kpi-delta" id="m-pctnew-d"></div></div>
+      <div class="kpi"><div class="kpi-label">Conv. Nuevos</div><div class="kpi-value" id="m-convnew">—</div><div class="kpi-delta" id="m-convnew-d"></div></div>
+      <div class="kpi"><div class="kpi-label">Conv. Recurrentes</div><div class="kpi-value" id="m-convret">—</div><div class="kpi-delta" id="m-convret-d"></div></div>
+      <div class="kpi"><div class="kpi-label">Ingresos Meta</div><div class="kpi-value accent" id="m-revenue">—</div><div class="kpi-delta" id="m-revenue-d"></div></div>
+    </div>
+    <div class="charts-grid-2">
+      <div class="chart-card">
+        <div class="chart-label">Nuevos vs recurrentes — tráfico Meta (Paid Social), período actual</div>
+        <table class="pages-table">
+          <thead><tr>
+            <th>Métrica</th>
+            <th style="text-align:right">Nuevos</th>
+            <th style="text-align:right">Recurrentes</th>
+          </tr></thead>
+          <tbody id="meta-nvr-body">
+            <tr><td colspan="3" style="text-align:center;color:#5a5750;padding:2rem;font-family:'DM Mono',monospace;font-size:11px">SIN CARGAR</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="chart-card">
+        <div class="chart-label">Sesiones diarias Meta — actual vs período anterior</div>
+        <div class="chart-wrap" style="height:240px">
+          <canvas id="metaTimelineChart" role="img" aria-label="Sesiones diarias Meta">Sesiones diarias Meta</canvas>
+        </div>
+        <div id="meta-timeline-legend" style="margin-top:12px;display:flex;flex-wrap:wrap;gap:14px;font-size:11px;color:#9a9690;font-family:'DM Mono',monospace;"></div>
+      </div>
+    </div>
+  </div><!-- /panel-meta -->
+
 </main>
 
 <footer class="site-footer">
@@ -618,8 +659,10 @@ function fmtM(n) {
 
 /* ---- Pestañas + atribución UTM ---- */
 const UTM_WEBHOOK = 'https://pgiacomelli2506.app.n8n.cloud/webhook/ga4-utm-attribution';
+const META_WEBHOOK = 'https://pgiacomelli2506.app.n8n.cloud/webhook/ga4-meta-attribution';
 let activeTab = 'resumen';
 let utmCache = null;
+let metaCache = null;
 let currentRange = {
   start: document.getElementById('start-date').value,
   end: document.getElementById('end-date').value
@@ -673,6 +716,7 @@ function setPreset(start, end, label, btn) {
   document.getElementById('start-date').value = iso(s);
   currentRange = { start: iso(s), end: iso(e) };
   utmCache = null;
+  metaCache = null;
   refresh();
 }
 
@@ -682,11 +726,13 @@ function onCargar() {
     end: document.getElementById('end-date').value
   };
   utmCache = null;
+  metaCache = null;
   refresh();
 }
 
 function refresh() {
   if (activeTab === 'resumen') loadData(currentRange.start, currentRange.end);
+  else if (activeTab === 'meta') loadMeta();
   else loadUTM();
 }
 
@@ -697,6 +743,7 @@ function switchTab(name, btn) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.getElementById('panel-' + name).classList.add('active');
   if ((name === 'campanias' || name === 'anuncios') && !utmCache) loadUTM();
+  if (name === 'meta' && !metaCache) loadMeta();
 }
 
 function esc(s) {
@@ -810,6 +857,126 @@ function renderAnuncios(rows) {
   document.getElementById('au-revenue').textContent = fmtM(tot.r);
   document.getElementById('au-trans').textContent = fmt(tot.t);
   document.getElementById('au-conv').textContent = tot.s > 0 ? (tot.t / tot.s * 100).toFixed(2) + '%' : '—';
+}
+
+/* ---- Meta Attribution: nuevos vs recurrentes ---- */
+function prevPeriod(startISO, endISO) {
+  const ms = s => { const p = s.split('-').map(Number); return Date.UTC(p[0], p[1] - 1, p[2]); };
+  const sMs = ms(startISO), eMs = ms(endISO);
+  const days = Math.round((eMs - sMs) / 86400000) + 1;
+  const peMs = sMs - 86400000;
+  const psMs = peMs - (days - 1) * 86400000;
+  const iso = v => new Date(v).toISOString().split('T')[0];
+  return { start: iso(psMs), end: iso(peMs), days: days };
+}
+
+function setDelta(elId, val, unit) {
+  const el = document.getElementById(elId);
+  if (val == null || isNaN(val)) { el.className = 'kpi-delta flat'; el.textContent = '— vs anterior'; return; }
+  const cls = val > 0.05 ? 'up' : (val < -0.05 ? 'down' : 'flat');
+  const arrow = val > 0.05 ? '▲' : (val < -0.05 ? '▼' : '■');
+  const sign = val > 0 ? '+' : '';
+  el.className = 'kpi-delta ' + cls;
+  el.textContent = arrow + ' ' + sign + val.toFixed(1) + unit + ' vs anterior';
+}
+
+async function loadMeta() {
+  const prev = prevPeriod(currentRange.start, currentRange.end);
+  const overlay = document.getElementById('loadingOverlay');
+  const txt = overlay.querySelector('.loading-text');
+  const prevTxt = txt.textContent;
+  txt.textContent = 'CARGANDO ATRIBUCIÓN META';
+  overlay.classList.add('show');
+  document.getElementById('meta-nvr-body').innerHTML = utmMsg(3, 'CARGANDO...', '#5a5750');
+  try {
+    const res = await fetch(META_WEBHOOK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        period1Start: prev.start, period1End: prev.end,
+        period2Start: currentRange.start, period2End: currentRange.end
+      })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const d = await res.json();
+    metaCache = { data: d, prev: prev, current: { start: currentRange.start, end: currentRange.end } };
+    renderMeta(metaCache);
+  } catch(e) {
+    console.error(e);
+    document.getElementById('meta-nvr-body').innerHTML = utmMsg(3, 'ERROR DE CONEXIÓN — verificá el workflow n8n', '#e07060');
+    document.getElementById('meta-meta').textContent = 'error de conexión';
+  } finally {
+    overlay.classList.remove('show');
+    txt.textContent = prevTxt;
+  }
+}
+
+function renderMeta(cache) {
+  const ps = cache.data.paidSocial || {};
+  const ant = ps.antes || {}, des = ps.despues || {};
+  const desTot = des.total || {}, desNew = des.nuevos || {}, desRet = des.recurrentes || {};
+  const v = ps.variacion || {};
+
+  document.getElementById('m-sessions').textContent = fmt(desTot.sessions || 0);
+  setDelta('m-sessions-d', v.sessions, '%');
+  document.getElementById('m-pctnew').textContent = (des.pctNuevos || 0).toFixed(1) + '%';
+  setDelta('m-pctnew-d', (des.pctNuevos || 0) - (ant.pctNuevos || 0), ' pts');
+  document.getElementById('m-convnew').textContent = (des.tasaConvNuevos || 0).toFixed(2) + '%';
+  setDelta('m-convnew-d', (des.tasaConvNuevos || 0) - (ant.tasaConvNuevos || 0), ' pts');
+  document.getElementById('m-convret').textContent = (des.tasaConvRecurrentes || 0).toFixed(2) + '%';
+  setDelta('m-convret-d', (des.tasaConvRecurrentes || 0) - (ant.tasaConvRecurrentes || 0), ' pts');
+  document.getElementById('m-revenue').textContent = fmtM(desTot.purchaseRevenue || 0);
+  setDelta('m-revenue-d', v.purchaseRevenue, '%');
+
+  const rows = [
+    ['Sesiones', fmt(desNew.sessions || 0), fmt(desRet.sessions || 0)],
+    ['Usuarios', fmt(desNew.totalUsers || 0), fmt(desRet.totalUsers || 0)],
+    ['Add to cart', fmt(desNew.addToCarts || 0), fmt(desRet.addToCarts || 0)],
+    ['Transacciones', fmt(desNew.transactions || 0), fmt(desRet.transactions || 0)],
+    ['Ingresos', fmtM(desNew.purchaseRevenue || 0), fmtM(desRet.purchaseRevenue || 0)],
+    ['Conversión', (des.tasaConvNuevos || 0).toFixed(2) + '%', (des.tasaConvRecurrentes || 0).toFixed(2) + '%']
+  ];
+  document.getElementById('meta-nvr-body').innerHTML = rows.map(r => `<tr>
+    <td><span class="utm-label">${r[0]}</span></td>
+    <td class="utm-num">${r[1]}</td>
+    <td class="utm-num">${r[2]}</td>
+  </tr>`).join('');
+
+  document.getElementById('meta-meta').textContent =
+    'actual ' + cache.current.start + ' → ' + cache.current.end +
+    '  ·  anterior ' + cache.prev.start + ' → ' + cache.prev.end;
+
+  renderMetaTimeline(cache);
+}
+
+function renderMetaTimeline(cache) {
+  const tl = cache.data.timelinePaidSocial || {};
+  const inRange = (dateStr, s, e) => dateStr >= s.replace(/-/g, '') && dateStr <= e.replace(/-/g, '');
+  const desRows = (tl.despues || []).filter(r => inRange(r.date, cache.current.start, cache.current.end)).sort((a, b) => a.date.localeCompare(b.date));
+  const antRows = (tl.antes || []).filter(r => inRange(r.date, cache.prev.start, cache.prev.end)).sort((a, b) => a.date.localeCompare(b.date));
+  const labels = desRows.map(r => r.date.slice(6, 8) + '/' + r.date.slice(4, 6));
+  if (charts.metaTimeline) charts.metaTimeline.destroy();
+  charts.metaTimeline = new Chart(document.getElementById('metaTimelineChart'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Actual', data: desRows.map(r => r.sessions || 0), borderColor: '#d4a853', backgroundColor: 'rgba(212,168,83,0.08)', fill: true, tension: 0.4, pointRadius: 0, pointHoverRadius: 4, borderWidth: 1.5 },
+        { label: 'Período anterior', data: antRows.map(r => r.sessions || 0), borderColor: '#7ba8cc', backgroundColor: 'transparent', fill: false, tension: 0.4, pointRadius: 0, pointHoverRadius: 4, borderWidth: 1.5, borderDash: [4, 3] }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ' ' + ctx.dataset.label + ': ' + fmt(ctx.parsed.y) + ' sesiones' } } },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#5a5750', font: { family: 'DM Mono', size: 10 }, maxTicksLimit: 10 } },
+        y: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#5a5750', font: { family: 'DM Mono', size: 10 } } }
+      }
+    }
+  });
+  document.getElementById('meta-timeline-legend').innerHTML =
+    '<span style="display:flex;align-items:center;gap:5px"><span style="width:14px;height:2px;background:#d4a853;display:inline-block"></span>Actual</span>' +
+    '<span style="display:flex;align-items:center;gap:5px"><span style="width:14px;height:0;border-top:2px dashed #7ba8cc;display:inline-block"></span>Período anterior</span>';
 }
 
 function updateKPIs(ov) {
