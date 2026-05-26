@@ -348,6 +348,56 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
   100% { width: 0%; margin-left: 100%; }
 }
 
+/* Tabs */
+.tab-bar {
+  display: flex;
+  gap: 2px;
+  padding: 0 2.5rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+}
+.tab-btn {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text3);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 14px 20px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  margin-bottom: -1px;
+  white-space: nowrap;
+}
+.tab-btn:hover { color: var(--text2); }
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-panel { display: none; animation: fadeIn 0.25s ease; }
+.tab-panel.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+/* UTM tabs */
+.utm-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 1.5rem; flex-wrap: wrap; gap: 8px;
+}
+.utm-title { font-family: var(--font-display); font-size: 1.35rem; font-weight: 300; color: var(--text); letter-spacing: -0.01em; }
+.utm-title span { color: var(--accent); font-style: italic; }
+.utm-meta { font-family: var(--font-mono); font-size: 11px; color: var(--text3); letter-spacing: 0.05em; }
+.table-scroll { overflow-x: auto; }
+.tipo-tag {
+  font-family: var(--font-mono); font-size: 9px; padding: 3px 7px;
+  border-radius: 2px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.t-advantage { background: rgba(212,168,83,0.15); color: var(--accent); }
+.t-remarketing { background: rgba(123,168,204,0.15); color: var(--info); }
+.t-other { background: rgba(255,255,255,0.05); color: var(--text3); }
+.utm-num { font-family: var(--font-mono); font-size: 11px; text-align: right; color: var(--text2); white-space: nowrap; }
+.utm-label { font-size: 13px; color: var(--text); }
+.utm-sub { font-family: var(--font-mono); font-size: 11px; color: var(--text3); }
+
 /* Responsive */
 @media (max-width: 768px) {
   .site-header { padding: 1.5rem 1.25rem 1rem; }
@@ -355,6 +405,8 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
   .charts-grid, .charts-grid-2 { grid-template-columns: 1fr; }
   .kpi-value { font-size: 1.6rem; }
   .site-footer { flex-direction: column; gap: 6px; text-align: center; }
+  .tab-bar { padding: 0 1rem; overflow-x: auto; }
+  .tab-btn { padding: 12px 13px; font-size: 10px; }
 }
 </style>
 </head>
@@ -378,11 +430,19 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
     <input type="date" id="start-date">
     <span class="date-sep">→</span>
     <input type="date" id="end-date">
-    <button class="load-btn" id="loadBtn" onclick="loadData()">↻ CARGAR</button>
+    <button class="load-btn" id="loadBtn" onclick="onCargar()">↻ CARGAR</button>
   </div>
 </header>
 
+<nav class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('resumen',this)">Resumen general</button>
+  <button class="tab-btn" onclick="switchTab('campanias',this)">UTM · Campañas</button>
+  <button class="tab-btn" onclick="switchTab('anuncios',this)">UTM · Anuncios</button>
+</nav>
+
 <main class="main">
+
+  <div id="panel-resumen" class="tab-panel active">
 
   <div class="status-bar">
     <div><span class="status-dot"></span>Conectado a Google Analytics 4</div>
@@ -457,6 +517,77 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
     <div class="opp-card"><div class="opp-num">01</div><div class="opp-title">Cargando oportunidades...</div><div class="opp-desc">Esperando datos de GA4</div></div>
   </div>
 
+  </div><!-- /panel-resumen -->
+
+  <div id="panel-campanias" class="tab-panel">
+    <div class="utm-head">
+      <div class="utm-title">Campañas <span>Meta Ads</span></div>
+      <div class="utm-meta" id="camp-meta">— sin cargar</div>
+    </div>
+    <div class="kpi-grid" style="margin-bottom:1.5rem">
+      <div class="kpi"><div class="kpi-label">Campañas</div><div class="kpi-value" id="cu-count">—</div></div>
+      <div class="kpi"><div class="kpi-label">Sesiones Meta</div><div class="kpi-value" id="cu-sessions">—</div></div>
+      <div class="kpi"><div class="kpi-label">Ingresos Meta</div><div class="kpi-value accent" id="cu-revenue">—</div></div>
+      <div class="kpi"><div class="kpi-label">Transacciones</div><div class="kpi-value" id="cu-trans">—</div></div>
+      <div class="kpi"><div class="kpi-label">Conversión media</div><div class="kpi-value" id="cu-conv">—</div></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-label">Detalle por campaña — fuente facebook · utm_campaign</div>
+      <div class="table-scroll">
+        <table class="pages-table">
+          <thead><tr>
+            <th>Campaña</th>
+            <th>Tipo</th>
+            <th style="text-align:right">Sesiones</th>
+            <th style="text-align:right">% Nuevos</th>
+            <th style="text-align:right">Add to cart</th>
+            <th style="text-align:right">Transac.</th>
+            <th style="text-align:right">Ingresos</th>
+            <th style="text-align:right">Conv.</th>
+          </tr></thead>
+          <tbody id="camp-body">
+            <tr><td colspan="8" style="text-align:center;color:#5a5750;padding:2rem;font-family:'DM Mono',monospace;font-size:11px">SIN CARGAR</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div><!-- /panel-campanias -->
+
+  <div id="panel-anuncios" class="tab-panel">
+    <div class="utm-head">
+      <div class="utm-title">Anuncios <span>Meta Ads</span></div>
+      <div class="utm-meta" id="ad-meta">— sin cargar</div>
+    </div>
+    <div class="kpi-grid" style="margin-bottom:1.5rem">
+      <div class="kpi"><div class="kpi-label">Anuncios</div><div class="kpi-value" id="au-count">—</div></div>
+      <div class="kpi"><div class="kpi-label">Sesiones Meta</div><div class="kpi-value" id="au-sessions">—</div></div>
+      <div class="kpi"><div class="kpi-label">Ingresos Meta</div><div class="kpi-value accent" id="au-revenue">—</div></div>
+      <div class="kpi"><div class="kpi-label">Transacciones</div><div class="kpi-value" id="au-trans">—</div></div>
+      <div class="kpi"><div class="kpi-label">Conversión media</div><div class="kpi-value" id="au-conv">—</div></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-label">Detalle por anuncio — fuente facebook · utm_content</div>
+      <div class="table-scroll">
+        <table class="pages-table">
+          <thead><tr>
+            <th>Anuncio</th>
+            <th>Campaña</th>
+            <th>Tipo</th>
+            <th style="text-align:right">Sesiones</th>
+            <th style="text-align:right">% Nuevos</th>
+            <th style="text-align:right">Add to cart</th>
+            <th style="text-align:right">Transac.</th>
+            <th style="text-align:right">Ingresos</th>
+            <th style="text-align:right">Conv.</th>
+          </tr></thead>
+          <tbody id="ad-body">
+            <tr><td colspan="9" style="text-align:center;color:#5a5750;padding:2rem;font-family:'DM Mono',monospace;font-size:11px">SIN CARGAR</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div><!-- /panel-anuncios -->
+
 </main>
 
 <footer class="site-footer">
@@ -481,12 +612,163 @@ function fmtM(n) {
   return '$' + Math.round(n/1000) + 'K';
 }
 
+/* ---- Pestañas + atribución UTM ---- */
+const UTM_WEBHOOK = 'https://pgiacomelli2506.app.n8n.cloud/webhook/ga4-utm-attribution';
+let activeTab = 'resumen';
+let utmCache = null;
+let currentRange = {
+  start: document.getElementById('start-date').value,
+  end: document.getElementById('end-date').value
+};
+
 function setPreset(start, end, label, btn) {
   document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('period-label').textContent = 'ÚLTIMOS ' + label;
   document.getElementById('ai-period').textContent = 'Últimos ' + label.toLowerCase();
-  loadData(start, end);
+  const days = parseInt(start) || 30;
+  const e = new Date();
+  const s = new Date(); s.setDate(s.getDate() - days);
+  const iso = d => d.toISOString().split('T')[0];
+  document.getElementById('end-date').value = iso(e);
+  document.getElementById('start-date').value = iso(s);
+  currentRange = { start: iso(s), end: iso(e) };
+  utmCache = null;
+  refresh();
+}
+
+function onCargar() {
+  currentRange = {
+    start: document.getElementById('start-date').value,
+    end: document.getElementById('end-date').value
+  };
+  utmCache = null;
+  refresh();
+}
+
+function refresh() {
+  if (activeTab === 'resumen') loadData(currentRange.start, currentRange.end);
+  else loadUTM();
+}
+
+function switchTab(name, btn) {
+  activeTab = name;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  if ((name === 'campanias' || name === 'anuncios') && !utmCache) loadUTM();
+}
+
+function esc(s) {
+  return String(s == null ? '—' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+function tipoTag(t) {
+  const cls = { advantage: 't-advantage', remarketing: 't-remarketing' }[t] || 't-other';
+  return `<span class="tipo-tag ${cls}">${esc(t || 'otro')}</span>`;
+}
+function utmMsg(cols, text, color) {
+  return `<tr><td colspan="${cols}" style="text-align:center;color:${color};padding:2rem;font-family:'DM Mono',monospace;font-size:11px">${text}</td></tr>`;
+}
+
+async function loadUTM() {
+  const overlay = document.getElementById('loadingOverlay');
+  const txt = overlay.querySelector('.loading-text');
+  const prev = txt.textContent;
+  txt.textContent = 'CARGANDO ATRIBUCIÓN UTM';
+  overlay.classList.add('show');
+  document.getElementById('camp-body').innerHTML = utmMsg(8, 'CARGANDO...', '#5a5750');
+  document.getElementById('ad-body').innerHTML = utmMsg(9, 'CARGANDO...', '#5a5750');
+  try {
+    const res = await fetch(UTM_WEBHOOK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        period1Start: currentRange.start, period1End: currentRange.end,
+        period2Start: currentRange.start, period2End: currentRange.end
+      })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const d = await res.json();
+    const campanias = (d.campanias || []).filter(c => c.periodo === 'despues');
+    const anuncios = (d.anuncios || []).filter(a => a.periodo === 'despues');
+    utmCache = { campanias, anuncios };
+    renderCampanias(campanias);
+    renderAnuncios(anuncios);
+    const now = new Date().toLocaleString('es-AR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+    document.getElementById('camp-meta').textContent = campanias.length + ' campañas · ' + now;
+    document.getElementById('ad-meta').textContent = anuncios.length + ' anuncios · ' + now;
+  } catch(e) {
+    console.error(e);
+    document.getElementById('camp-body').innerHTML = utmMsg(8, 'ERROR DE CONEXIÓN — verificá el workflow n8n', '#e07060');
+    document.getElementById('ad-body').innerHTML = utmMsg(9, 'ERROR DE CONEXIÓN — verificá el workflow n8n', '#e07060');
+  } finally {
+    overlay.classList.remove('show');
+    txt.textContent = prev;
+  }
+}
+
+function utmTotals(rows) {
+  return rows.reduce((a, r) => ({
+    s: a.s + (r.sesiones || 0),
+    r: a.r + (r.ingresos_ars || 0),
+    t: a.t + (r.transacciones || 0)
+  }), { s: 0, r: 0, t: 0 });
+}
+
+function renderCampanias(rows) {
+  const sorted = [...rows].sort((a, b) => (b.sesiones || 0) - (a.sesiones || 0));
+  const tbody = document.getElementById('camp-body');
+  if (!sorted.length) { tbody.innerHTML = utmMsg(8, 'SIN DATOS PARA ESTE RANGO', '#5a5750'); }
+  else {
+    tbody.innerHTML = sorted.map(c => `<tr>
+      <td><span class="utm-label">${esc(c.campana)}</span></td>
+      <td>${tipoTag(c.tipo)}</td>
+      <td class="utm-num">${fmt(c.sesiones || 0)}</td>
+      <td class="utm-num">${(c.pct_nuevos || 0).toFixed(1)}%</td>
+      <td class="utm-num">${fmt(c.add_to_carts || 0)}</td>
+      <td class="utm-num">${fmt(c.transacciones || 0)}</td>
+      <td class="utm-num" style="color:var(--accent)">${fmtM(c.ingresos_ars || 0)}</td>
+      <td class="utm-num">${(c.tasa_conv || 0).toFixed(2)}%</td>
+    </tr>`).join('');
+  }
+  const tot = utmTotals(sorted);
+  document.getElementById('cu-count').textContent = sorted.length;
+  document.getElementById('cu-sessions').textContent = fmt(tot.s);
+  document.getElementById('cu-revenue').textContent = fmtM(tot.r);
+  document.getElementById('cu-trans').textContent = fmt(tot.t);
+  document.getElementById('cu-conv').textContent = tot.s > 0 ? (tot.t / tot.s * 100).toFixed(2) + '%' : '—';
+}
+
+function renderAnuncios(rows) {
+  const sorted = [...rows].sort((a, b) => (b.sesiones || 0) - (a.sesiones || 0));
+  const tbody = document.getElementById('ad-body');
+  if (!sorted.length) { tbody.innerHTML = utmMsg(9, 'SIN DATOS PARA ESTE RANGO', '#5a5750'); }
+  else {
+    tbody.innerHTML = sorted.map(a => {
+      const ph = !a.anuncio || a.anuncio === '(not set)' || a.anuncio === '(sin content)';
+      const name = ph
+        ? `<span class="utm-sub">${esc(a.anuncio || '(sin content)')}</span>`
+        : `<span class="utm-label">${esc(a.anuncio)}</span>`;
+      return `<tr>
+        <td>${name}</td>
+        <td><span class="utm-sub">${esc(a.campana)}</span></td>
+        <td>${tipoTag(a.tipo)}</td>
+        <td class="utm-num">${fmt(a.sesiones || 0)}</td>
+        <td class="utm-num">${(a.pct_nuevos || 0).toFixed(1)}%</td>
+        <td class="utm-num">${fmt(a.add_to_carts || 0)}</td>
+        <td class="utm-num">${fmt(a.transacciones || 0)}</td>
+        <td class="utm-num" style="color:var(--accent)">${fmtM(a.ingresos_ars || 0)}</td>
+        <td class="utm-num">${(a.tasa_conv || 0).toFixed(2)}%</td>
+      </tr>`;
+    }).join('');
+  }
+  const tot = utmTotals(sorted);
+  document.getElementById('au-count').textContent = sorted.length;
+  document.getElementById('au-sessions').textContent = fmt(tot.s);
+  document.getElementById('au-revenue').textContent = fmtM(tot.r);
+  document.getElementById('au-trans').textContent = fmt(tot.t);
+  document.getElementById('au-conv').textContent = tot.s > 0 ? (tot.t / tot.s * 100).toFixed(2) + '%' : '—';
 }
 
 function updateKPIs(ov) {
