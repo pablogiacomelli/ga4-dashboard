@@ -466,6 +466,7 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
   <button class="tab-btn" onclick="switchTab('meta',this)">Meta · Atribución</button>
   <button class="tab-btn" onclick="switchTab('roas',this)">ROAS</button>
   <button class="tab-btn" onclick="switchTab('mensajes',this)">Mensajes</button>
+  <button class="tab-btn" onclick="switchTab('trafico',this)">Tráfico</button>
 </nav>
 
 <main class="main">
@@ -801,6 +802,51 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
     </div>
   </div><!-- /panel-mensajes -->
 
+  <div id="panel-trafico" class="tab-panel">
+    <div class="utm-head">
+      <div class="utm-title">Tráfico <span>Meta Ads · Campañas de Landing Page Views</span></div>
+      <div class="utm-meta" id="trf-meta">— sin cargar</div>
+    </div>
+
+    <div class="tab-note">Estas campañas optimizan visitas al sitio (Landing Page Views), no ventas directas. Son la capa de prospección que alimenta el pixel para que Remarketing y Advantage tengan combustible. Su ROAS se cobra aguas abajo (vía Remarketing 14-30 días después), no en su propia columna.</div>
+
+    <div class="kpi-grid" style="margin-bottom:1.5rem">
+      <div class="kpi"><div class="kpi-label">Gasto en tráfico</div><div class="kpi-value" id="trf-gasto">—</div></div>
+      <div class="kpi"><div class="kpi-label">Landing Page Views</div><div class="kpi-value accent" id="trf-lpv">—</div></div>
+      <div class="kpi"><div class="kpi-label">Costo x LPV</div><div class="kpi-value accent" id="trf-costo">—</div></div>
+      <div class="kpi"><div class="kpi-label">Clics en enlace</div><div class="kpi-value" id="trf-clics">—</div></div>
+      <div class="kpi"><div class="kpi-label">Campañas activas</div><div class="kpi-value" id="trf-count">—</div></div>
+    </div>
+
+    <div class="chart-card" style="margin-bottom:2rem">
+      <div class="chart-label">Detalle por campaña de tráfico — datos Meta</div>
+      <div class="table-scroll">
+        <table class="pages-table" id="trf-table">
+          <thead><tr>
+            <th>Campaña</th>
+            <th style="text-align:right">Gasto ARS</th>
+            <th style="text-align:right">LPV</th>
+            <th style="text-align:right">Costo x LPV</th>
+            <th style="text-align:right">Clics</th>
+            <th style="text-align:right">Impresiones</th>
+            <th style="text-align:right">Alcance</th>
+          </tr></thead>
+          <tbody id="trf-body">
+            <tr><td colspan="7" style="text-align:center;color:#5a5750;padding:2rem;font-family:'DM Mono',monospace;font-size:11px">SIN CARGAR</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="ai-section">
+      <div class="ai-header">
+        <div class="ai-tag">▸ Análisis IA · <span id="ai-period-trf">—</span></div>
+        <button class="ai-refresh" onclick="loadROAS()">↻ REGENERAR</button>
+      </div>
+      <div class="ai-content" id="ai-content-trf">Cargá los datos para generar el análisis automático.</div>
+    </div>
+  </div><!-- /panel-trafico -->
+
 </main>
 
 <footer class="site-footer">
@@ -917,7 +963,7 @@ function switchTab(name, btn) {
   document.getElementById('panel-' + name).classList.add('active');
   if ((name === 'campanias' || name === 'anuncios') && !utmCache) loadUTM();
   if (name === 'meta' && !metaCache) loadMeta();
-  if ((name === 'roas' || name === 'mensajes') && !roasCache) loadROAS();
+  if ((name === 'roas' || name === 'mensajes' || name === 'trafico') && !roasCache) loadROAS();
 }
 
 function esc(s) {
@@ -1407,6 +1453,7 @@ async function loadROAS() {
     roasCache = d;
     renderROAS(d);
     renderMensajes(d);
+    renderTrafico(d);
   } catch(e) {
     console.error(e);
     document.getElementById('roas-body').innerHTML = utmMsg(7, 'ERROR DE CONEXIÓN — verificá el workflow n8n', '#e07060');
@@ -1489,6 +1536,36 @@ function renderMensajes(d) {
   document.getElementById('msg-meta').textContent = per + '  ·  ' + camps.length + ' campañas';
   setText('ai-content-msg', narrativeMensajes(d));
   setPeriodSpan('ai-period-msg');
+}
+
+
+function renderTrafico(d) {
+  const t = (d.meta && d.meta.trafico) || {};
+  document.getElementById('trf-gasto').textContent = fmtM(t.gasto_ars || 0);
+  document.getElementById('trf-lpv').textContent = fmt(t.lpv || 0);
+  document.getElementById('trf-costo').textContent = '$' + fmt(t.costo_lpv_ars || 0);
+  document.getElementById('trf-clics').textContent = fmt(t.clics || 0);
+
+  const camps = t.campanias || [];
+  document.getElementById('trf-count').textContent = camps.length;
+  const tbody = document.getElementById('trf-body');
+  if (!camps.length) {
+    tbody.innerHTML = utmMsg(7, 'SIN DATOS PARA ESTE RANGO', '#5a5750');
+  } else {
+    tbody.innerHTML = camps.map(c => `<tr>
+      <td><span class="utm-label">${esc(c.campana)}</span></td>
+      <td class="utm-num">${fmtM(c.gasto_ars || 0)}</td>
+      <td class="utm-num" style="color:var(--accent)">${fmt(c.lpv || 0)}</td>
+      <td class="utm-num">$${fmt(c.costo_lpv_ars || 0)}</td>
+      <td class="utm-num">${fmt(c.clics_enlace || 0)}</td>
+      <td class="utm-num">${fmt(c.impresiones || 0)}</td>
+      <td class="utm-num">${fmt(c.alcance || 0)}</td>
+    </tr>`).join('');
+  }
+
+  const per = d.periodo ? (d.periodo.desde + ' → ' + d.periodo.hasta) : fmtPeriod();
+  document.getElementById('trf-meta').textContent = per + '  ·  ' + camps.length + ' campañas';
+  setPeriodSpan('ai-period-trf');
 }
 
 /* ---- Narrativas (análisis templado por panel) ---- */
