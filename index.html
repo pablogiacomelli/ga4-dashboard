@@ -995,11 +995,16 @@ function onCargar() {
   refresh();
 }
 
+// 'trafico' NO estaba contemplado y caia en el `else loadUTM()`: al cambiar el rango
+// estando en la pestana Trafico se llamaba al workflow equivocado, asi que el panel
+// nunca se actualizaba y mostraba siempre los mismos numeros.
+const TABS_ROAS = ['roas', 'mensajes', 'trafico'];
+
 function refresh() {
   if (activeTab === 'resumen') loadData(currentRange.start, currentRange.end);
   else if (activeTab === 'meta') loadMeta();
-  else if (activeTab === 'roas' || activeTab === 'mensajes') loadROAS();
-  else loadUTM();
+  else if (TABS_ROAS.includes(activeTab)) loadROAS();
+  else if (activeTab === 'campanias' || activeTab === 'anuncios') loadUTM();
 }
 
 function switchTab(name, btn) {
@@ -1010,7 +1015,7 @@ function switchTab(name, btn) {
   document.getElementById('panel-' + name).classList.add('active');
   if ((name === 'campanias' || name === 'anuncios') && !utmCache) loadUTM();
   if (name === 'meta' && !metaCache) loadMeta();
-  if ((name === 'roas' || name === 'mensajes' || name === 'trafico') && !roasCache) loadROAS();
+  if (TABS_ROAS.includes(name) && !roasCache) loadROAS();
 }
 
 function esc(s) {
