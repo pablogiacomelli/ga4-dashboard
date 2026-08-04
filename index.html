@@ -449,9 +449,9 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
     <div class="site-subtitle">TIENDA ONLINE · PROPERTY 363391300 · <span id="period-label">ÚLTIMOS 30 DÍAS</span></div>
   </div>
   <div class="controls">
-    <button class="preset-btn active" onclick="setPreset('7daysAgo','today','7 DÍAS',this)">7D</button>
-    <button class="preset-btn" onclick="setPreset('30daysAgo','today','30 DÍAS',this)">30D</button>
-    <button class="preset-btn" onclick="setPreset('90daysAgo','today','90 DÍAS',this)">90D</button>
+    <button class="preset-btn" onclick="setPreset(7,'7 DÍAS',this)">7D</button>
+    <button class="preset-btn active" onclick="setPreset(30,'30 DÍAS',this)">30D</button>
+    <button class="preset-btn" onclick="setPreset(90,'90 DÍAS',this)">90D</button>
     <span class="date-sep">·</span>
     <input type="date" id="start-date">
     <span class="date-sep">→</span>
@@ -524,7 +524,7 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
         <tr>
           <th>Página</th>
           <th style="text-align:right">Vistas</th>
-          <th style="text-align:right">Tiempo prom.</th>
+          <th style="text-align:right">Engagement/vista</th>
           <th style="text-align:right">Bounce rate</th>
           <th style="width:80px">Volumen</th>
         </tr>
@@ -537,10 +537,10 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
 
   <div class="ai-section">
     <div class="ai-header">
-      <div class="ai-tag">▸ Análisis IA · <span id="ai-period">—</span></div>
-      <button class="ai-refresh" onclick="requestAIAnalysis()">↻ REGENERAR</button>
+      <div class="ai-tag">▸ Lectura del período · <span id="ai-period">—</span></div>
+      <button class="ai-refresh" onclick="requestAIAnalysis()">↻ RECARGAR</button>
     </div>
-    <div class="ai-content" id="ai-content">Cargá los datos para generar el análisis automático con inteligencia artificial.</div>
+    <div class="ai-content" id="ai-content">Cargá los datos para ver la lectura del período.</div>
   </div>
 
   <div class="opps-grid" id="opps-grid">
@@ -677,7 +677,7 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
 
   <div id="panel-roas" class="tab-panel">
     <div class="utm-head">
-      <div class="utm-title">ROAS <span>Meta Ads · Campañas de ventas</span></div>
+      <div class="utm-title">ROAS <span>Meta Ads · todo el gasto paid</span></div>
       <div class="utm-meta" id="roas-meta">— sin cargar</div>
     </div>
 
@@ -697,7 +697,7 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
             <div class="score-sub" id="roas-brecha">—</div>
           </div>
         </div>
-        <div class="score-note">GA4 cuenta solo el <strong>último clic</strong> (piso); Meta cuenta toda asistencia, view-through incluido (techo). El retorno real está en el medio. Para decidir, mirá la <strong>tendencia</strong> del número GA4 período a período, no el valor absoluto.</div>
+        <div class="score-note">Los dos números usan el <strong>mismo perímetro</strong>: todo el gasto de Meta paid (ventas + mensajes + tráfico). GA4 cuenta solo el <strong>último clic</strong> (piso); Meta cuenta toda asistencia, view-through incluido (techo). El retorno real está en el medio. Para decidir, mirá la <strong>tendencia</strong> del número GA4 período a período, no el valor absoluto.</div>
       </div>
       <div class="score-card">
         <div class="chart-label">CPA · costo por venta (ARS)</div>
@@ -719,7 +719,7 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
     </div>
 
     <div class="kpi-grid" style="margin-bottom:1.5rem">
-      <div class="kpi"><div class="kpi-label">Gasto en ventas</div><div class="kpi-value" id="r-gasto">—</div></div>
+      <div class="kpi"><div class="kpi-label">Gasto Meta total</div><div class="kpi-value" id="r-gasto">—</div></div>
       <div class="kpi"><div class="kpi-label">Revenue GA4 atribuido</div><div class="kpi-value accent" id="r-revga4">—</div></div>
       <div class="kpi"><div class="kpi-label">Revenue que reporta Meta</div><div class="kpi-value" id="r-revmeta">—</div></div>
       <div class="kpi"><div class="kpi-label">Transacc. GA4</div><div class="kpi-value" id="r-transga4">—</div></div>
@@ -857,19 +857,68 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
 
 <script>
 const WEBHOOK = 'https://pgiacomelli2506.app.n8n.cloud/webhook/ga4-analytics';
+// Clave compartida con los workflows de n8n. El HTML es publico, asi que esto no
+// esconde nada de quien lea el fuente: corta el escaneo automatico, y el CORS
+// restringido al origin corta las llamadas desde otros sitios.
+const DASH_KEY = 'mh_dash_7Kq2vX9pL4nR8tW3';
 let currentData = null;
 let charts = {};
 
-const today = new Date();
-document.getElementById('end-date').value = today.toISOString().split('T')[0];
-const d30 = new Date(today); d30.setDate(d30.getDate()-30);
-document.getElementById('start-date').value = d30.toISOString().split('T')[0];
+// toISOString() convierte a UTC: en Buenos Aires (UTC-3), despues de las 21:00
+// devolvia la fecha de MANANA. Esto arma el ISO en hora local.
+function isoLocal(d) {
+  const z = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+  return z.toISOString().split('T')[0];
+}
 
-function fmt(n) { return Math.round(n).toLocaleString('es-AR'); }
+// El rango termina AYER: hoy es un dia parcial y hacia caer siempre el ultimo punto
+// de todos los graficos. Y "7 dias" ahora son 7 dias, no 8 (antes iba de hoy-7 a hoy,
+// inclusive en ambos extremos).
+function rangoUltimosDias(days) {
+  const end = new Date(); end.setDate(end.getDate() - 1);
+  const start = new Date(end); start.setDate(start.getDate() - (days - 1));
+  return { start: isoLocal(start), end: isoLocal(end) };
+}
+
+const rangoInicial = rangoUltimosDias(30);
+document.getElementById('start-date').value = rangoInicial.start;
+document.getElementById('end-date').value = rangoInicial.end;
+
+function fmt(n) {
+  const v = Number(n);
+  if (!isFinite(v)) return '—';
+  return Math.round(v).toLocaleString('es-AR');
+}
+// Antes todo lo menor a 1M se mostraba como $XK: $800 salia "$1K" y $0 salia "$0K".
+// Y los negativos no se manejaban.
 function fmtM(n) {
-  if (n >= 1000000000) return '$' + (n/1000000000).toFixed(1) + 'B';
-  if (n >= 1000000) return '$' + (n/1000000).toFixed(1) + 'M';
-  return '$' + Math.round(n/1000) + 'K';
+  const v = Number(n);
+  if (!isFinite(v)) return '—';
+  const sign = v < 0 ? '-' : '';
+  const a = Math.abs(v);
+  if (a >= 1e9) return sign + '$' + (a / 1e9).toFixed(1) + 'B';
+  if (a >= 1e6) return sign + '$' + (a / 1e6).toFixed(1) + 'M';
+  if (a >= 1e4) return sign + '$' + Math.round(a / 1000) + 'K';
+  return sign + '$' + Math.round(a).toLocaleString('es-AR');
+}
+
+// Un solo punto de entrada para los 4 webhooks: manda la clave, distingue 401 de
+// error de red, y detecta el {ok:false} que ahora devuelven los workflows cuando
+// GA4 o Meta fallan (antes n8n abortaba sin CORS y el navegador no podia leer nada).
+async function postJSON(url, body) {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(Object.assign({ key: DASH_KEY }, body))
+  });
+  if (res.status === 401) throw new Error('NO AUTORIZADO — revisá la clave del dashboard');
+  if (!res.ok) throw new Error('HTTP ' + res.status + ' — el workflow de n8n no respondió');
+  const d = await res.json();
+  if (d && d.ok === false) {
+    const det = d.error || (Array.isArray(d.errores) ? d.errores.join(' · ') : '');
+    throw new Error(det || 'El workflow devolvió un error');
+  }
+  return d;
 }
 
 /* ---- Pestañas + atribución UTM ---- */
@@ -920,18 +969,15 @@ function updateSortIndicators(tableId, st) {
   });
 }
 
-function setPreset(start, end, label, btn) {
+function setPreset(days, label, btn) {
   document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
+  if (btn) btn.classList.add('active');
   document.getElementById('period-label').textContent = 'ÚLTIMOS ' + label;
   document.getElementById('ai-period').textContent = 'Últimos ' + label.toLowerCase();
-  const days = parseInt(start) || 30;
-  const e = new Date();
-  const s = new Date(); s.setDate(s.getDate() - days);
-  const iso = d => d.toISOString().split('T')[0];
-  document.getElementById('end-date').value = iso(e);
-  document.getElementById('start-date').value = iso(s);
-  currentRange = { start: iso(s), end: iso(e) };
+  const r = rangoUltimosDias(days);
+  document.getElementById('start-date').value = r.start;
+  document.getElementById('end-date').value = r.end;
+  currentRange = r;
   utmCache = null;
   metaCache = null;
   roasCache = null;
@@ -968,7 +1014,7 @@ function switchTab(name, btn) {
 }
 
 function esc(s) {
-  return String(s == null ? '—' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  return String(s == null ? '—' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 function tipoTag(t) {
   const cls = { advantage: 't-advantage', remarketing: 't-remarketing' }[t] || 't-other';
@@ -987,28 +1033,25 @@ async function loadUTM() {
   document.getElementById('camp-body').innerHTML = utmMsg(8, 'CARGANDO...', '#5a5750');
   document.getElementById('ad-body').innerHTML = utmMsg(9, 'CARGANDO...', '#5a5750');
   try {
-    const res = await fetch(UTM_WEBHOOK, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        period1Start: currentRange.start, period1End: currentRange.end,
-        period2Start: currentRange.start, period2End: currentRange.end
-      })
+    const d = await postJSON(UTM_WEBHOOK, {
+      period1Start: currentRange.start, period1End: currentRange.end,
+      period2Start: currentRange.start, period2End: currentRange.end
     });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const d = await res.json();
     const campanias = (d.campanias || []).filter(c => c.periodo === 'despues');
     const anuncios = (d.anuncios || []).filter(a => a.periodo === 'despues');
     utmCache = { campanias, anuncios };
     renderCampanias(campanias);
     renderAnuncios(anuncios);
     const now = new Date().toLocaleString('es-AR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
-    document.getElementById('camp-meta').textContent = campanias.length + ' campañas · ' + now;
-    document.getElementById('ad-meta').textContent = anuncios.length + ' anuncios · ' + now;
+    const avisoC = (d.truncado && d.truncado.campanias) ? ' · ⚠ hay más campañas de las que entran en el reporte' : '';
+    const avisoA = (d.truncado && d.truncado.anuncios) ? ' · ⚠ hay más anuncios de los que entran en el reporte' : '';
+    document.getElementById('camp-meta').textContent = campanias.length + ' campañas · ' + now + avisoC;
+    document.getElementById('ad-meta').textContent = anuncios.length + ' anuncios · ' + now + avisoA;
   } catch(e) {
     console.error(e);
-    document.getElementById('camp-body').innerHTML = utmMsg(8, 'ERROR DE CONEXIÓN — verificá el workflow n8n', '#e07060');
-    document.getElementById('ad-body').innerHTML = utmMsg(9, 'ERROR DE CONEXIÓN — verificá el workflow n8n', '#e07060');
+    const msg = esc(e.message || 'ERROR DE CONEXIÓN');
+    document.getElementById('camp-body').innerHTML = utmMsg(8, msg, '#e07060');
+    document.getElementById('ad-body').innerHTML = utmMsg(9, msg, '#e07060');
   } finally {
     overlay.classList.remove('show');
     txt.textContent = prev;
@@ -1112,22 +1155,16 @@ async function loadMeta() {
   overlay.classList.add('show');
   document.getElementById('meta-nvr-body').innerHTML = utmMsg(3, 'CARGANDO...', '#5a5750');
   try {
-    const res = await fetch(META_WEBHOOK, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        period1Start: prev.start, period1End: prev.end,
-        period2Start: currentRange.start, period2End: currentRange.end
-      })
+    const d = await postJSON(META_WEBHOOK, {
+      period1Start: prev.start, period1End: prev.end,
+      period2Start: currentRange.start, period2End: currentRange.end
     });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const d = await res.json();
     metaCache = { data: d, prev: prev, current: { start: currentRange.start, end: currentRange.end } };
     renderMeta(metaCache);
   } catch(e) {
     console.error(e);
-    document.getElementById('meta-nvr-body').innerHTML = utmMsg(3, 'ERROR DE CONEXIÓN — verificá el workflow n8n', '#e07060');
-    document.getElementById('meta-meta').textContent = 'error de conexión';
+    document.getElementById('meta-nvr-body').innerHTML = utmMsg(3, esc(e.message || 'ERROR DE CONEXIÓN'), '#e07060');
+    document.getElementById('meta-meta').textContent = e.message || 'error de conexión';
   } finally {
     overlay.classList.remove('show');
     txt.textContent = prevTxt;
@@ -1323,18 +1360,21 @@ function updateSources(data) {
 }
 
 function updatePages(data) {
-  const maxV = data[0] ? data[0].screenPageViews : 1;
+  const maxV = (data[0] && data[0].screenPageViews) ? data[0].screenPageViews : 1;
   const tbody = document.getElementById('pages-body');
   tbody.innerHTML = data.slice(0,10).map(p => {
     const path = p.pagePath || '—';
     const views = fmt(p.screenPageViews || 0);
-    const time = Math.round(p.averageSessionDuration || 0) + 's';
+    // Antes esto mostraba averageSessionDuration, que es una metrica de SESION:
+    // la duracion media de las sesiones que en algun momento incluyeron la pagina,
+    // no el tiempo en esa pagina. Ahora el workflow devuelve engagement por vista.
+    const time = Math.round(p.avgEngagementSeconds || 0) + 's';
     const b = ((p.bounceRate||0)*100);
     const bClass = b < 30 ? 'b-good' : b < 50 ? 'b-mid' : 'b-bad';
     const barW = Math.round((p.screenPageViews||0)/maxV*100);
     const shortPath = path.length > 35 ? path.slice(0,35)+'…' : path;
     return `<tr>
-      <td><span class="page-path" title="${path}">${shortPath}</span></td>
+      <td><span class="page-path" title="${esc(path)}">${esc(shortPath)}</span></td>
       <td style="text-align:right;font-family:'DM Mono',monospace;font-size:11px">${views}</td>
       <td style="text-align:right;font-family:'DM Mono',monospace;font-size:11px">${time}</td>
       <td style="text-align:right"><span class="bounce-tag ${bClass}">${b.toFixed(1)}%</span></td>
@@ -1343,19 +1383,40 @@ function updatePages(data) {
   }).join('');
 }
 
+// Antes, si faltaba el dato, esta funcion afirmaba en negrita "91% del trafico es
+// movil" y "91% de abandono": dos numeros hardcodeados indistinguibles de los reales.
+// Ahora, si no hay dato, se dice que no hay dato.
+function metricasDerivadas(data) {
+  const ov = data.overview || {};
+  const mobileData = (data.deviceBreakdown||[]).find(d => d.deviceCategory === 'mobile');
+  const mobilePct = (mobileData && ov.totalSessions > 0)
+    ? Math.round(mobileData.sessions / ov.totalSessions * 100) : null;
+
+  // El abandono de checkout cruza universos: transacciones de TODO el sitio contra
+  // vistas de una pagina. Es una estimacion, y se etiqueta como tal.
+  const checkoutPage = (data.topPages||[]).find(p => p.pagePath && p.pagePath.includes('comprar'));
+  const checkoutViews = checkoutPage ? Math.round(checkoutPage.screenPageViews || 0) : 0;
+  let abandono = null;
+  if (checkoutViews > 0 && ov.totalTransactions != null) {
+    const a = Math.round((1 - ov.totalTransactions / checkoutViews) * 100);
+    if (a >= 0 && a <= 100) abandono = a;
+  }
+  return { mobilePct, abandono, checkoutViews };
+}
+
 function updateOpportunities(data) {
   const ov = data.overview;
-  const checkoutVisits = (data.topPages||[]).find(p => p.pagePath && p.pagePath.includes('comprar'));
-  const checkoutViews = checkoutVisits ? Math.round(checkoutVisits.screenPageViews) : 0;
-  const abandonment = checkoutViews > 0 ? Math.round((1 - ov.totalTransactions/checkoutViews)*100) : 0;
-  const mobileData = (data.deviceBreakdown||[]).find(d => d.deviceCategory === 'mobile');
-  const mobilePct = mobileData && ov.totalSessions > 0 ? Math.round(mobileData.sessions/ov.totalSessions*100) : 91;
+  const m = metricasDerivadas(data);
 
   const opps = [
-    { n:'01', t:'Recuperar abandono de checkout', d: abandonment > 0 ? `${checkoutViews.toLocaleString()} visitas al checkout vs ${fmt(ov.totalTransactions)} compras = ${abandonment}% abandono. Email de recuperación urgente.` : 'Implementar email de recuperación de carrito para reducir abandono.' },
-    { n:'02', t:'Optimizar experiencia mobile', d: `${mobilePct}% del tráfico es móvil. Cada mejora en UX mobile impacta directamente en el ${mobilePct}% de tus ingresos.` },
-    { n:'03', t:'Explotar búsqueda interna', d: 'Los usuarios que usan /search/ tienen bajo bounce rate. Analizá qué buscan para ampliar catálogo o mejorar visibilidad de productos.' },
-    { n:'04', t:'Aumentar ticket promedio', d: `Ticket actual de ${fmtM(ov.avgOrderValue)} ARS. Cross-selling en página de producto y upselling en checkout pueden incrementarlo 15-25%.` }
+    { n:'01', t:'Recuperar abandono de checkout', d: m.abandono != null
+        ? `${fmt(m.checkoutViews)} visitas al checkout vs ${fmt(ov.totalTransactions)} compras = ~${m.abandono}% de abandono estimado. Email de recuperación de carrito.`
+        : 'Sin datos suficientes del checkout en este rango. Implementar email de recuperación de carrito sigue siendo la palanca más directa.' },
+    { n:'02', t:'Optimizar experiencia mobile', d: m.mobilePct != null
+        ? `${m.mobilePct}% del tráfico es móvil. Cada mejora en UX mobile impacta sobre esa porción de los ingresos.`
+        : 'Sin desglose por dispositivo en este rango.' },
+    { n:'03', t:'Explotar búsqueda interna', d: 'Revisá qué buscan los usuarios en /search/ para ampliar catálogo o mejorar la visibilidad de esos productos.' },
+    { n:'04', t:'Aumentar ticket promedio', d: `Ticket actual de ${fmtM(ov.avgOrderValue)} ARS. Cross-selling en página de producto y upselling en checkout son las palancas habituales.` }
   ];
   document.getElementById('opps-grid').innerHTML = opps.map(o => `
     <div class="opp-card">
@@ -1367,15 +1428,25 @@ function updateOpportunities(data) {
 
 function updateAIContent(data) {
   const ov = data.overview;
-  const mobileData = (data.deviceBreakdown||[]).find(d => d.deviceCategory === 'mobile');
-  const mobilePct = mobileData && ov.totalSessions > 0 ? Math.round(mobileData.sessions/ov.totalSessions*100) : 91;
-  const checkoutPage = (data.topPages||[]).find(p => p.pagePath && p.pagePath.includes('comprar'));
-  const abandonment = checkoutPage ? Math.round((1 - ov.totalTransactions/(checkoutPage.screenPageViews||1))*100) : 91;
+  const m = metricasDerivadas(data);
 
-  document.getElementById('ai-content').innerHTML = `
-    El <strong>${mobilePct}% del tráfico llega desde móvil</strong> y genera la mayor parte de los ingresos — tu negocio es esencialmente mobile-first. La conversión global de <strong>${ov.conversionRate.toFixed(2)}%</strong> con un ticket promedio de <strong>${fmtM(ov.avgOrderValue)} ARS</strong> indica una audiencia de alta intención de compra pero con fricción en el proceso.<br><br>
-    La oportunidad más crítica: el checkout tiene un <strong>${abandonment}% de abandono</strong>. Con ${fmt(ov.totalTransactions)} transacciones completadas, recuperar incluso el 10% del abandono representaría aproximadamente <strong>${fmtM(ov.totalRevenue * 0.1)} ARS adicionales</strong> sin incrementar el tráfico. La prioridad inmediata es implementar email de recuperación de carrito y revisar la UX del proceso de pago en mobile.
-  `;
+  let txt = '';
+  if (m.mobilePct != null) {
+    txt += `El <strong>${m.mobilePct}% del tráfico llega desde móvil</strong>. `;
+  }
+  txt += `La conversión global es de <strong>${(ov.conversionRate || 0).toFixed(2)}%</strong> con un ticket promedio de <strong>${fmtM(ov.avgOrderValue)} ARS</strong>`;
+  if (ov.pctNuevos != null) {
+    txt += `, y el <strong>${ov.pctNuevos.toFixed(1)}%</strong> de los ${fmt(ov.totalUsers)} usuarios del período son nuevos`;
+  }
+  txt += '.<br><br>';
+
+  if (m.abandono != null) {
+    txt += `El checkout muestra un <strong>~${m.abandono}% de abandono estimado</strong> (${fmt(m.checkoutViews)} visitas a la página de compra contra ${fmt(ov.totalTransactions)} transacciones del sitio — es una aproximación, no un embudo cerrado). Recuperar el 10% de ese abandono equivaldría a unos <strong>${fmtM(ov.totalRevenue * 0.1)} ARS</strong> sin sumar tráfico.`;
+  } else {
+    txt += `No hay datos suficientes del checkout en este rango para estimar el abandono. Con ${fmt(ov.totalTransactions)} transacciones e ingresos por ${fmtM(ov.totalRevenue)} ARS, la palanca más directa sigue siendo reducir fricción en el proceso de pago.`;
+  }
+
+  document.getElementById('ai-content').innerHTML = txt;
   document.getElementById('ai-period').textContent = document.getElementById('period-label').textContent.replace('ÚLTIMOS ','últimos ').toLowerCase();
 }
 
@@ -1388,13 +1459,7 @@ async function loadData(start, end) {
   btn.disabled = true;
   btn.textContent = '↻ CARGANDO...';
   try {
-    const res = await fetch(WEBHOOK, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ startDate, endDate })
-    });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const d = await res.json();
+    const d = await postJSON(WEBHOOK, { startDate, endDate });
     currentData = d;
     if (d.overview) {
       updateKPIs(d.overview);
@@ -1410,7 +1475,8 @@ async function loadData(start, end) {
     document.getElementById('update-time').textContent = 'ACTUALIZADO: ' + now;
     document.getElementById('footer-time').textContent = now;
   } catch(e) {
-    document.getElementById('ai-content').textContent = 'Error al conectar con el servidor. Verificá que el workflow de n8n esté activo.';
+    document.getElementById('ai-content').textContent = (e && e.message) ? e.message : 'Error al conectar con el servidor.';
+    document.getElementById('update-time').textContent = 'ERROR AL CARGAR';
     console.error(e);
   } finally {
     overlay.classList.remove('show');
@@ -1444,23 +1510,18 @@ async function loadROAS() {
   document.getElementById('roas-body').innerHTML = utmMsg(7, 'CARGANDO...', '#5a5750');
   document.getElementById('msg-body').innerHTML = utmMsg(7, 'CARGANDO...', '#5a5750');
   try {
-    const res = await fetch(ROAS_WEBHOOK, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ startDate: currentRange.start, endDate: currentRange.end })
-    });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const d = await res.json();
+    const d = await postJSON(ROAS_WEBHOOK, { startDate: currentRange.start, endDate: currentRange.end });
     roasCache = d;
     renderROAS(d);
     renderMensajes(d);
     renderTrafico(d);
   } catch(e) {
     console.error(e);
-    document.getElementById('roas-body').innerHTML = utmMsg(7, 'ERROR DE CONEXIÓN — verificá el workflow n8n', '#e07060');
-    document.getElementById('msg-body').innerHTML = utmMsg(7, 'ERROR DE CONEXIÓN — verificá el workflow n8n', '#e07060');
-    document.getElementById('roas-meta').textContent = 'error de conexión';
-    document.getElementById('msg-meta').textContent = 'error de conexión';
+    const msg = esc(e.message || 'ERROR DE CONEXIÓN');
+    document.getElementById('roas-body').innerHTML = utmMsg(7, msg, '#e07060');
+    document.getElementById('msg-body').innerHTML = utmMsg(7, msg, '#e07060');
+    document.getElementById('roas-meta').textContent = e.message || 'error de conexión';
+    document.getElementById('msg-meta').textContent = e.message || 'error de conexión';
   } finally {
     overlay.classList.remove('show');
     txt.textContent = prev;
@@ -1469,6 +1530,7 @@ async function loadROAS() {
 
 function renderROAS(d) {
   const v = (d.meta && d.meta.ventas) || {};
+  const tot = (d.meta && d.meta.total) || {};
   const g = (d.ga4 && d.ga4.metaPaid) || {};
   const roas = d.roas || {};
   const cpa = d.cpa || {};
@@ -1480,12 +1542,15 @@ function renderROAS(d) {
   document.getElementById('cpa-ga4').textContent = '$' + fmt(cpa.ga4_ars || 0);
   document.getElementById('cpa-metaval').textContent = '$' + fmt(cpa.meta_ars || 0);
 
-  document.getElementById('r-gasto').textContent = fmtM(v.gasto_ars || 0);
+  // Estos 6 KPIs ahora son todos del mismo perímetro (todo Meta paid). Antes el
+  // gasto era solo de ventas y el revenue de GA4 era de todo, así que el ROAS
+  // que salía de dividirlos no cerraba con ninguna de las dos cosas.
+  document.getElementById('r-gasto').textContent = fmtM(tot.gasto_ars || 0);
   document.getElementById('r-revga4').textContent = fmtM(g.ingresos_ars || 0);
-  document.getElementById('r-revmeta').textContent = fmtM(v.revenue_meta_ars || 0);
+  document.getElementById('r-revmeta').textContent = fmtM(tot.revenue_meta_ars || 0);
   document.getElementById('r-transga4').textContent = fmt(g.transacciones || 0);
-  document.getElementById('r-compmeta').textContent = fmt(v.compras_meta || 0);
-  document.getElementById('r-tc').textContent = '$' + fmt(tc.efectivo || 0);
+  document.getElementById('r-compmeta').textContent = fmt(tot.compras_meta || 0);
+  document.getElementById('r-tc').textContent = tc.efectivo ? ('$' + fmt(tc.efectivo)) : '—';
 
   const camps = v.campanias || [];
   const tbody = document.getElementById('roas-body');
@@ -1571,13 +1636,21 @@ function renderTrafico(d) {
 
 /* ---- Narrativas (análisis templado por panel) ---- */
 function narrativeRoas(d) {
-  const roas = d.roas || {}, cpa = d.cpa || {}, v = (d.meta && d.meta.ventas) || {}, g = (d.ga4 && d.ga4.metaPaid) || {};
+  const roas = d.roas || {}, cpa = d.cpa || {};
+  const v = (d.meta && d.meta.ventas) || {}, tot = (d.meta && d.meta.total) || {};
+  const g = (d.ga4 && d.ga4.metaPaid) || {};
   const rGa4 = roas.ga4LastClick || 0, rMeta = roas.meta || 0;
   const top = (v.campanias || [])[0];
-  let txt = `Con <strong>$${fmt(v.gasto_ars || 0)} ARS</strong> invertidos en campañas de venta, el scorecard oficial (GA4 last-click) marca un ROAS de <strong>${rGa4.toFixed(2)}×</strong> — por cada peso, ${rGa4.toFixed(2)} de retorno medible por último clic sobre ${fmt(g.transacciones || 0)} transacciones. Meta reporta ${rMeta.toFixed(2)}× porque cuenta toda asistencia; el retorno real está entre ambos números.`;
+  let txt = `Con <strong>$${fmt(tot.gasto_ars || 0)} ARS</strong> invertidos en Meta (ventas, mensajes y tráfico), el scorecard GA4 last-click marca un ROAS de <strong>${rGa4.toFixed(2)}×</strong> sobre ${fmt(g.transacciones || 0)} transacciones atribuidas. Meta reporta ${rMeta.toFixed(2)}× porque cuenta toda asistencia; el retorno real está entre ambos números.`;
   txt += `<br><br>El costo por venta va de <strong>$${fmt(cpa.meta_ars || 0)}</strong> (lente Meta) a <strong>$${fmt(cpa.ga4_ars || 0)} ARS</strong> (lente GA4). `;
+  if (roas.soloVentas) {
+    txt += `Mirando solo las campañas de ventas, el ROAS es ${(roas.soloVentas.meta || 0).toFixed(2)}× según Meta y ${(roas.soloVentas.ga4LastClick || 0).toFixed(2)}× según GA4. `;
+  }
   if (top) txt += `La campaña <strong>${esc(top.campana)}</strong> concentra la mayor inversión, con un ROAS-Meta de ${(top.roas_meta || 0).toFixed(2)}×. `;
   txt += `La decisión no pasa por el valor exacto sino por la <strong>tendencia</strong>: si el ROAS-GA4 sube período a período, Meta está mejorando su rendimiento real.`;
+  if (Array.isArray(d.errores) && d.errores.length) {
+    txt += `<br><br><span style="color:#e07060">⚠ ${esc(d.errores.join(' · '))}</span>`;
+  }
   return txt;
 }
 
@@ -1593,7 +1666,7 @@ function narrativeMensajes(d) {
   if (best && worst && best !== worst) {
     txt += `<br><br>La más eficiente es <strong>${esc(best.campana)}</strong> ($${fmt(best.costo_conv_ars)}/conv.) y la más cara <strong>${esc(worst.campana)}</strong> ($${fmt(worst.costo_conv_ars)}/conv.) — una brecha de ${Math.round((worst.costo_conv_ars / Math.max(best.costo_conv_ars, 1)))}× que conviene revisar para reasignar presupuesto hacia lo que rinde.`;
   }
-  txt += `<br><br>Estas conversaciones no aparecen en el ROAS web: su valor se concreta en el cierre por chat, fuera del tracking de GA4. El número a vigilar acá es el costo por conversación.`;
+  txt += `<br><br>Estas conversaciones no aparecen en el ROAS web: su valor se concreta en el cierre por chat, fuera del tracking de GA4. El número a vigilar acá es el costo por conversación. Solo entran acá las campañas con objetivo de mensajes o leads — antes caían también awareness, engagement y video, que aportan gasto y cero conversaciones e inflaban este costo.`;
   return txt;
 }
 
@@ -1645,7 +1718,9 @@ function narrativeMeta() {
   setPeriodSpan('ai-period-meta');
 }
 
-window.addEventListener('load', () => loadData('30daysAgo','today'));
+// Antes esto mandaba '30daysAgo'/'today' mientras el boton 7D figuraba activo y los
+// inputs mostraban otro rango: tres cosas distintas al mismo tiempo.
+window.addEventListener('load', () => loadData(currentRange.start, currentRange.end));
 </script>
 </body>
 </html>
