@@ -1043,8 +1043,16 @@ async function loadUTM() {
       period1Start: currentRange.start, period1End: currentRange.end,
       period2Start: currentRange.start, period2End: currentRange.end
     });
-    const campanias = (d.campanias || []).filter(c => c.periodo === 'despues');
-    const anuncios = (d.anuncios || []).filter(a => a.periodo === 'despues');
+    // El workflow ahora manda un solo dateRange (rangoUnico) y las filas ya no
+    // traen el campo `periodo`. Filtrar por 'despues' dejaba la tabla en cero.
+    // Se mantiene compatibilidad con respuestas viejas que sí lo traían.
+    const pickPeriodo = (rows) => {
+      const arr = rows || [];
+      const despues = arr.filter(r => r && r.periodo === 'despues');
+      return despues.length ? despues : arr.filter(r => r && !r.periodo);
+    };
+    const campanias = pickPeriodo(d.campanias);
+    const anuncios = pickPeriodo(d.anuncios);
     utmCache = { campanias, anuncios };
     renderCampanias(campanias);
     renderAnuncios(anuncios);
