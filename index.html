@@ -857,7 +857,7 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
 </footer>
 
 <script>
-const WEBHOOK = 'https://pgiacomelli2506.app.n8n.cloud/webhook/ga4-analytics';
+const WEBHOOK = 'https://n8n.mahra-ai.online/webhook/ga4-analytics';
 // Clave compartida con los workflows de n8n. El HTML es publico, asi que esto no
 // esconde nada de quien lea el fuente: corta el escaneo automatico, y el CORS
 // restringido al origin corta las llamadas desde otros sitios.
@@ -923,9 +923,9 @@ async function postJSON(url, body) {
 }
 
 /* ---- Pestañas + atribución UTM ---- */
-const UTM_WEBHOOK = 'https://pgiacomelli2506.app.n8n.cloud/webhook/ga4-utm-attribution';
-const META_WEBHOOK = 'https://pgiacomelli2506.app.n8n.cloud/webhook/ga4-meta-attribution';
-const ROAS_WEBHOOK = 'https://pgiacomelli2506.app.n8n.cloud/webhook/ga4-meta-roas';
+const UTM_WEBHOOK = 'https://n8n.mahra-ai.online/webhook/ga4-utm-attribution';
+const META_WEBHOOK = 'https://n8n.mahra-ai.online/webhook/ga4-meta-attribution';
+const ROAS_WEBHOOK = 'https://n8n.mahra-ai.online/webhook/ga4-meta-roas';
 let activeTab = 'resumen';
 let utmCache = null;
 let metaCache = null;
