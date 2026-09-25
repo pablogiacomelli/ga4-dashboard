@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<!-- MAHRA · Informe del motor de conversion (Advantage+ + Remarketing). Build 2026-09-25.
+     Datos: n8n VPS, webhooks reporte-motor (ultimos 7 dias) y dashboard-semanal (historico lun-dom). -->
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Motor de conversión — MAHRA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,400;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --bg: #0f0f0d; --bg2: #171714; --bg3: #1e1e1a;
+  --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.12);
+  --text: #f0ede8; --text2: #9a9690; --text3: #5a5750;
+  --accent: #d4a853;
+  /* Paleta categorica validada para modo oscuro: azul (motor), naranja (Advantage+), aqua (Remarketing). */
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --ref: #6c6b64;
+  --good: #3fa877; --warn: #d2a13c; --bad: #e66767;
+  --font-display: 'Fraunces', Georgia, serif; --font-body: 'DM Sans', sans-serif; --font-mono: 'DM Mono', monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 15px; line-height: 1.6; }
+body { min-height: 100vh; }
+a { color: var(--accent); }
+.site-header { padding: 2rem 2.5rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; flex-wrap: wrap; }
+.site-title { font-family: var(--font-display); font-size: 1.6rem; font-weight: 300; }
+.site-title span { color: var(--accent); font-style: italic; }
+.site-subtitle { font-size: 12px; color: var(--text3); font-family: var(--font-mono); margin-top: 4px; letter-spacing: 0.05em; }
+.back { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; text-decoration: none; border: 1px solid var(--border2); padding: 6px 12px; border-radius: 3px; color: var(--text2); }
+.back:hover { border-color: var(--accent); color: var(--accent); }
+.main { padding: 2rem 2.5rem 3rem; max-width: 1300px; margin: 0 auto; }
+.status { font-family: var(--font-mono); font-size: 11px; color: var(--text3); padding: 8px 14px; background: var(--bg2); border: 1px solid var(--border); border-radius: 4px; margin-bottom: 2rem; }
+.status.err { color: var(--bad); border-color: rgba(230,103,103,0.35); }
+.sec { margin-bottom: 3rem; }
+.sec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border); }
+.sec-title { font-family: var(--font-display); font-size: 1.5rem; font-weight: 300; display: flex; align-items: center; gap: 10px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.sec-meta { font-family: var(--font-mono); font-size: 11px; color: var(--text3); letter-spacing: 0.05em; }
+.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1rem; }
+.kpi { background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; padding: 1.1rem 1.25rem; min-width: 0; }
+.kpi-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; color: var(--text3); text-transform: uppercase; margin-bottom: 8px; }
+.kpi-value { font-family: var(--font-display); font-size: 2rem; font-weight: 300; line-height: 1; }
+.kpi-sub { font-family: var(--font-mono); font-size: 10.5px; color: var(--text3); margin-top: 8px; }
+.pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 1.25rem; }
+.pill { font-size: 13px; padding: 9px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg2); color: var(--text2); display: flex; gap: 8px; align-items: center; }
+.pill b { color: var(--text); font-weight: 500; }
+.pill.bien { border-color: rgba(63,168,119,0.4); } .pill.bien .ico { color: var(--good); }
+.pill.medio { border-color: rgba(210,161,60,0.4); } .pill.medio .ico { color: var(--warn); }
+.pill.mal { border-color: rgba(230,103,103,0.4); } .pill.mal .ico { color: var(--bad); }
+.pill.sin .ico { color: var(--text3); }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem; margin-bottom: 1.25rem; }
+.card { background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; padding: 1.25rem 1.25rem 1rem; min-width: 0; }
+.card-title { font-family: var(--font-display); font-size: 1.1rem; font-weight: 400; margin-bottom: 2px; }
+.card-q { font-size: 12.5px; color: var(--text2); margin-bottom: 12px; }
+.chart { position: relative; height: 220px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+.lg { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--text2); }
+.sw { width: 15px; height: 3px; border-radius: 2px; flex: none; }
+.sw.dash { height: 0; border-top: 2px dashed var(--ref); }
+.read { margin-top: 10px; padding: 10px 12px; background: var(--bg3); border-left: 2px solid var(--border2); font-size: 12.5px; color: var(--text2); }
+.read b { color: var(--text); font-weight: 500; }
+.tscroll { overflow-x: auto; border: 1px solid var(--border); border-radius: 6px; background: var(--bg2); }
+table { border-collapse: collapse; width: 100%; min-width: 820px; font-size: 12.5px; }
+th, td { padding: 10px 12px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--border); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+th { background: var(--bg3); color: var(--text2); font-weight: 500; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; }
+th:first-child, td:first-child { text-align: left; font-family: var(--font-body); white-space: normal; min-width: 220px; }
+tbody tr:last-child td { border-bottom: none; }
+td .sem { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
+.muted { color: var(--text3); }
+.note { font-size: 12px; color: var(--text3); max-width: 80ch; display: grid; gap: 6px; }
+.site-footer { padding: 1.5rem 2.5rem; border-top: 1px solid var(--border); font-family: var(--font-mono); font-size: 10px; color: var(--text3); letter-spacing: 0.05em; }
+@media (max-width: 860px) {
+  .site-header, .main, .site-footer { padding-left: 1.25rem; padding-right: 1.25rem; }
+  .grid2 { grid-template-columns: 1fr; }
+  .kpis { grid-template-columns: repeat(2, 1fr); }
+  .kpi-value { font-size: 1.6rem; }
+}
+@media (max-width: 380px) { .kpis { grid-template-columns: 1fr; } .chart { height: 200px; } }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div>
+    <div class="site-title">MAHRA <span>Motor de conversión</span></div>
+    <div class="site-subtitle">META ADS · ADVANTAGE+ + REMARKETING · <span id="periodo">ÚLTIMOS 7 DÍAS</span></div>
+  </div>
+  <a class="back" href="./">← DASHBOARD COMPLETO</a>
+</header>
+
+<main class="main">
+  <div class="status" id="status">Cargando informe…</div>
+
+  <section class="sec" id="sec-motor">
+    <div class="sec-head">
+      <h2 class="sec-title"><span class="dot" style="background:var(--s1)"></span>Motor integrado</h2>
+      <span class="sec-meta">ADVANTAGE+ Y REMARKETING JUNTOS · LA RENTABILIDAD SE EVALÚA SOBRE EL CONJUNTO</span>
+    </div>
+    <div class="kpis" id="k-motor"></div>
+    <div class="pills" id="p-motor"></div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-title">ROAS por semana</div>
+        <p class="card-q">El combinado es el número que manda; las líneas por campaña son diagnóstico.</p>
+        <div class="chart"><canvas id="c-motor-roas" role="img" aria-label="ROAS semanal del motor y por campaña"></canvas></div>
+        <div class="legend"><span class="lg"><i class="sw" style="background:var(--s1)"></i>Motor</span><span class="lg"><i class="sw" style="background:var(--s2)"></i>Advantage+</span><span class="lg"><i class="sw" style="background:var(--s3)"></i>Remarketing</span><span class="lg"><i class="sw dash"></i>Umbral 5,0x</span></div>
+        <p class="read" id="r-motor-roas">—</p>
+      </div>
+      <div class="card">
+        <div class="card-title">Costo por compra por semana</div>
+        <p class="card-q">Dólares por compra. Calentar (Advantage+) cuesta más que cerrar (Remarketing): la brecha es estructural.</p>
+        <div class="chart"><canvas id="c-motor-cpa" role="img" aria-label="CPA semanal del motor y por campaña"></canvas></div>
+        <div class="legend"><span class="lg"><i class="sw" style="background:var(--s1)"></i>Motor</span><span class="lg"><i class="sw" style="background:var(--s2)"></i>Advantage+</span><span class="lg"><i class="sw" style="background:var(--s3)"></i>Remarketing</span></div>
+        <p class="read" id="r-motor-cpa">—</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="sec-advantage">
+    <div class="sec-head">
+      <h2 class="sec-title"><span class="dot" style="background:var(--s2)"></span>Advantage+</h2>
+      <span class="sec-meta">MEDIO DEL FUNNEL · CONSIDERACIÓN</span>
+    </div>
+    <div class="kpis" id="k-advantage"></div>
+    <div class="pills" id="p-advantage"></div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-title">ROAS de Advantage+</div>
+        <p class="card-q">Por semana cerrada, contra el umbral del motor.</p>
+        <div class="chart"><canvas id="c-advantage-roas" role="img" aria-label="ROAS semanal de Advantage+"></canvas></div>
+        <div class="legend"><span class="lg"><i class="sw" style="background:var(--s2)"></i>Advantage+</span><span class="lg"><i class="sw dash"></i>Umbral 5,0x</span></div>
+        <p class="read" id="r-advantage-roas">—</p>
+      </div>
+      <div class="card">
+        <div class="card-title">CPA de Advantage+</div>
+        <p class="card-q">Dólares por compra, por semana cerrada.</p>
+        <div class="chart"><canvas id="c-advantage-cpa" role="img" aria-label="CPA semanal de Advantage+"></canvas></div>
+        <div class="legend"><span class="lg"><i class="sw" style="background:var(--s2)"></i>Advantage+</span></div>
+        <p class="read" id="r-advantage-cpa">—</p>
+      </div>
+    </div>
+    <div class="tscroll"><table><thead><tr><th>Anuncio</th><th>Compras</th><th>CPA</th><th>Gasto</th><th>ROAS</th><th>Frecuencia</th><th>Visitas tienda</th><th>Carrito</th><th>Checkout</th><th>Conv. / visita</th></tr></thead><tbody id="t-advantage"></tbody></table></div>
+  </section>
+
+  <section class="sec" id="sec-remarketing">
+    <div class="sec-head">
+      <h2 class="sec-title"><span class="dot" style="background:var(--s3)"></span>Remarketing</h2>
+      <span class="sec-meta">FONDO DEL FUNNEL · CIERRE</span>
+    </div>
+    <div class="kpis" id="k-remarketing"></div>
+    <div class="pills" id="p-remarketing"></div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-title">ROAS de Remarketing</div>
+        <p class="card-q">Por semana cerrada, contra el umbral del motor.</p>
+        <div class="chart"><canvas id="c-remarketing-roas" role="img" aria-label="ROAS semanal de Remarketing"></canvas></div>
+        <div class="legend"><span class="lg"><i class="sw" style="background:var(--s3)"></i>Remarketing</span><span class="lg"><i class="sw dash"></i>Umbral 5,0x</span></div>
+        <p class="read" id="r-remarketing-roas">—</p>
+      </div>
+      <div class="card">
+        <div class="card-title">CPA de Remarketing</div>
+        <p class="card-q">Dólares por compra, por semana cerrada.</p>
+        <div class="chart"><canvas id="c-remarketing-cpa" role="img" aria-label="CPA semanal de Remarketing"></canvas></div>
+        <div class="legend"><span class="lg"><i class="sw" style="background:var(--s3)"></i>Remarketing</span></div>
+        <p class="read" id="r-remarketing-cpa">—</p>
+      </div>
+    </div>
+    <div class="tscroll"><table><thead><tr><th>Anuncio</th><th>Compras</th><th>CPA</th><th>Gasto</th><th>ROAS</th><th>Frecuencia</th><th>Visitas tienda</th><th>Carrito</th><th>Checkout</th><th>Conv. / visita</th></tr></thead><tbody id="t-remarketing"></tbody></table></div>
+  </section>
+
+  <div class="note">
+    <p><b>Números de cabecera y tablas:</b> últimos 7 días cerrados (hasta ayer), atribución configurada en la cuenta de Meta, montos en U$D.</p>
+    <p><b>Gráficas:</b> semanas cerradas de lunes a domingo, mismo origen. Umbrales: ROAS del motor 5,0x · alerta de frecuencia 3,5 · CPA excelente ≤ 7, aceptable ≤ 12.</p>
+  </div>
+</main>
+
+<footer class="site-footer">MAHRA · MOTOR DE CONVERSIÓN · <span id="footer-time">—</span></footer>
+
+<script>
+const DASH_KEY = 'mh_dash_7Kq2vX9pL4nR8tW3';
+const REPORTE_WEBHOOK = 'https://n8n.mahra-ai.online/webhook/reporte-motor';
+const SEMANAL_WEBHOOK = 'https://n8n.mahra-ai.online/webhook/dashboard-semanal';
+const SEMANAS = 26;
+const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const tok = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const nf = (v, d = 2) => v == null ? '—' : v.toLocaleString('es-AR', { minimumFractionDigits: d, maximumFractionDigits: d });
+const ni = v => v == null ? '—' : Math.round(v).toLocaleString('es-AR');
+const usd = v => v == null ? '—' : 'U$D ' + nf(v);
+const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const fecha = iso => { const d = new Date(iso + 'T12:00:00'); return d.getDate() + ' ' + MESES[d.getMonth()]; };
+
+async function postJSON(url, body) {
+  const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({ key: DASH_KEY }, body)) });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const d = await res.json();
+  if (d && d.ok === false) throw new Error((d.errores || []).join(' · ') || d.error || 'error del workflow');
+  return d;
+}
+
+function kpis(id, b, extra) {
+  const roasCls = b.roas == null ? '' : (b.roas >= 5 ? 'style="color:var(--good)"' : 'style="color:var(--bad)"');
+  document.getElementById(id).innerHTML = [
+    ['Gasto', usd(b.gasto), extra.gasto || ''],
+    ['Compras', ni(b.compras), extra.compras || ''],
+    ['Costo por compra', usd(b.cpa), extra.cpa || ''],
+    ['ROAS', b.roas == null ? '—' : '<span ' + roasCls + '>' + nf(b.roas) + 'x</span>', extra.roas || 'umbral del motor 5,0x']
+  ].map(([l, v, s]) => `<div class="kpi"><div class="kpi-label">${l}</div><div class="kpi-value">${v}</div><div class="kpi-sub">${s}</div></div>`).join('');
+}
+
+const ICO = { bien: '●', medio: '●', mal: '●', sin: '○' };
+function pills(id, list) {
+  document.getElementById(id).innerHTML = list.map(p => `<div class="pill ${p.cls}"><span class="ico">${p.ico || ICO[p.cls] || '●'}</span><span>${p.html}</span></div>`).join('');
+}
+
+function tabla(id, anuncios) {
+  const col = c => c == null ? tok('--text3') : c <= 6 ? tok('--good') : c <= 10 ? tok('--warn') : tok('--bad');
+  document.getElementById(id).innerHTML = anuncios.length ? anuncios.map(a => `<tr>
+    <td><span class="sem" style="background:${col(a.cpa)}"></span>${esc(a.nombre)}</td>
+    <td>${ni(a.compras)}</td><td>${a.cpa == null ? '<span class="muted">—</span>' : '$' + nf(a.cpa)}</td><td>$${nf(a.gasto)}</td>
+    <td>${a.roas == null ? '—' : nf(a.roas) + 'x'}</td><td${a.frecuencia >= 3.5 ? ' style="color:var(--bad)"' : ''}>${nf(a.frecuencia)}</td>
+    <td>${ni(a.lpv)}</td><td>${ni(a.carritos)}</td><td>${ni(a.checkouts)}</td><td>${a.conv_lpv == null ? '—' : nf(a.conv_lpv, 1) + '%'}</td>
+  </tr>`).join('') : '<tr><td colspan="10" class="muted">Sin anuncios con gasto en el período.</td></tr>';
+}
+
+function bloqueCampana(k, b) {
+  kpis('k-' + k, b, { gasto: ni(b.impresiones) + ' impresiones', compras: ni(b.lpv) + ' visitas · ' + ni(b.carritos) + ' carritos · ' + ni(b.checkouts) + ' checkouts' });
+  pills('p-' + k, [
+    { cls: b.alerta_frecuencia ? 'mal' : 'bien', ico: b.alerta_frecuencia ? '▲' : '✓', html: b.alerta_frecuencia ? '<b>Frecuencia alta: ' + nf(b.frecuencia_max) + '</b> — rotá creativos pronto' : '<b>Frecuencia saludable: ' + nf(b.frecuencia_max) + '</b> — distribuyendo bien' },
+    { cls: b.diagnostico.nivel, html: '<b>' + esc(b.diagnostico.texto) + '</b>' }
+  ]);
+  tabla('t-' + k, b.anuncios);
+}
+
+// Posicion y racha en la serie: distingue un mal dia de una tendencia.
+function contexto(vals, fmt, bajoEsMejor) {
+  const i = vals.length - 1, v = vals[i];
+  if (v == null) return 'Sin dato la última semana.';
+  const hist = vals.filter(x => x != null), n = hist.length;
+  const mayores = hist.filter(x => x > v).length, menores = hist.filter(x => x < v).length;
+  let t = 'Última semana cerrada: <b>' + fmt(v) + '</b>';
+  if (n >= 4) {
+    if (mayores === 0) t += ', el máximo de ' + n + ' semanas';
+    else if (menores === 0) t += ', el mínimo de ' + n + ' semanas';
+    else t += ' (promedio ' + fmt(hist.reduce((s, x) => s + x, 0) / n) + ')';
+  }
+  let racha = 0, dir = 0;
+  for (let k = i; k > 0; k--) {
+    const a = vals[k], b = vals[k - 1];
+    if (a == null || b == null || a === b) break;
+    const dk = a > b ? 1 : -1;
+    if (dir === 0) dir = dk; else if (dk !== dir) break;
+    racha++;
+  }
+  if (racha >= 2) t += '; lleva ' + racha + ' semanas ' + (dir > 0 ? 'subiendo' : 'bajando') + ((dir > 0) === !bajoEsMejor ? '' : ' ⚠');
+  return t + '.';
+}
+
+const charts = [];
+function lineChart(id, labels, series, fmtTip, fmtAxis, ref) {
+  const ds = series.map(s => ({ label: s.label, data: s.data, borderColor: tok(s.color), backgroundColor: tok(s.color), borderWidth: s.bold ? 2.5 : 2, pointRadius: 0, pointHoverRadius: 5, pointHitRadius: 14, tension: 0.25, spanGaps: true }));
+  if (ref != null) ds.push({ label: 'Umbral', data: labels.map(() => ref), borderColor: tok('--ref'), borderWidth: 1.5, borderDash: [5, 4], pointRadius: 0, pointHitRadius: 0, _ref: true });
+  charts.push(new Chart(document.getElementById(id), {
+    type: 'line', data: { labels, datasets: ds },
+    options: {
+      responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, layout: { padding: { top: 6, right: 8 } },
+      plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1e1e1a', titleColor: '#f0ede8', bodyColor: '#9a9690', borderColor: 'rgba(255,255,255,0.12)', borderWidth: 1, padding: 10, boxWidth: 9, boxHeight: 3, filter: it => !it.dataset._ref, callbacks: { label: c => ' ' + c.dataset.label + ': ' + (c.parsed.y == null ? '—' : fmtTip(c.parsed.y)) } } },
+      scales: {
+        x: { grid: { display: false }, border: { color: 'rgba(255,255,255,0.07)' }, ticks: { color: '#5a5750', maxRotation: 0, autoSkipPadding: 12, font: { family: 'DM Mono', size: 10 } } },
+        y: { grid: { color: 'rgba(255,255,255,0.06)', drawTicks: false }, border: { display: false }, ticks: { color: '#5a5750', padding: 8, font: { family: 'DM Mono', size: 10 }, callback: fmtAxis } }
+      }
+    }
+  }));
+}
+
+function graficas(serie) {
+  const labels = serie.map(s => fecha(s.semana_inicio));
+  const col = f => serie.map(f);
+  const fx = v => nf(v) + 'x', fu = v => 'U$D ' + nf(v);
+  const roas = { motor: col(s => s.motor.roas), advantage: col(s => s.advantage.roas), remarketing: col(s => s.remarketing.roas) };
+  const cpa = { motor: col(s => s.motor.cpa), advantage: col(s => s.advantage.cpa), remarketing: col(s => s.remarketing.cpa) };
+  lineChart('c-motor-roas', labels, [
+    { label: 'Motor', data: roas.motor, color: '--s1', bold: true },
+    { label: 'Advantage+', data: roas.advantage, color: '--s2' },
+    { label: 'Remarketing', data: roas.remarketing, color: '--s3' }
+  ], fx, v => v + 'x', 5);
+  lineChart('c-motor-cpa', labels, [
+    { label: 'Motor', data: cpa.motor, color: '--s1', bold: true },
+    { label: 'Advantage+', data: cpa.advantage, color: '--s2' },
+    { label: 'Remarketing', data: cpa.remarketing, color: '--s3' }
+  ], fu, v => '$' + v);
+  lineChart('c-advantage-roas', labels, [{ label: 'Advantage+', data: roas.advantage, color: '--s2', bold: true }], fx, v => v + 'x', 5);
+  lineChart('c-advantage-cpa', labels, [{ label: 'Advantage+', data: cpa.advantage, color: '--s2', bold: true }], fu, v => '$' + v);
+  lineChart('c-remarketing-roas', labels, [{ label: 'Remarketing', data: roas.remarketing, color: '--s3', bold: true }], fx, v => v + 'x', 5);
+  lineChart('c-remarketing-cpa', labels, [{ label: 'Remarketing', data: cpa.remarketing, color: '--s3', bold: true }], fu, v => '$' + v);
+
+  const debajo = roas.motor.filter(v => v != null && v < 5).length;
+  document.getElementById('r-motor-roas').innerHTML = 'Motor. ' + contexto(roas.motor, fx, false)
+    + (debajo ? ' Estuvo debajo de 5,0x en ' + debajo + ' de ' + roas.motor.filter(v => v != null).length + ' semanas.' : ' No bajó de 5,0x en ninguna semana del período.');
+  document.getElementById('r-motor-cpa').innerHTML = 'Motor. ' + contexto(cpa.motor, fu, true);
+  document.getElementById('r-advantage-roas').innerHTML = contexto(roas.advantage, fx, false)
+    + ' Si queda debajo de 5 pero el motor está arriba, no se recorta mirando solo esta línea.';
+  document.getElementById('r-advantage-cpa').innerHTML = contexto(cpa.advantage, fu, true);
+  document.getElementById('r-remarketing-roas').innerHTML = contexto(roas.remarketing, fx, false);
+  document.getElementById('r-remarketing-cpa').innerHTML = contexto(cpa.remarketing, fu, true);
+}
+
+async function cargar() {
+  const st = document.getElementById('status');
+  const [rep, sem] = await Promise.allSettled([postJSON(REPORTE_WEBHOOK, {}), postJSON(SEMANAL_WEBHOOK, { semanas: SEMANAS })]);
+  const errores = [];
+  if (rep.status === 'fulfilled') {
+    const d = rep.value;
+    document.getElementById('periodo').textContent = 'ÚLTIMOS 7 DÍAS · ' + fecha(d.rango.desde).toUpperCase() + ' AL ' + fecha(d.rango.hasta).toUpperCase();
+    const m = d.motor;
+    kpis('k-motor', m, { gasto: 'Advantage+ ' + usd(d.advantage.gasto) + ' · Rem. ' + usd(d.remarketing.gasto), compras: m.participacion_compras_remarketing == null ? '' : 'Remarketing cerró el ' + nf(m.participacion_compras_remarketing, 0) + '%' });
+    pills('p-motor', [
+      { cls: m.sobre_umbral ? 'bien' : 'mal', ico: m.sobre_umbral ? '✓' : '▲', html: m.roas == null ? 'Sin datos de ROAS' : (m.sobre_umbral ? '<b>El motor rinde ' + nf(m.roas) + 'x</b>, por encima del umbral de 5,0x' : '<b>El motor está en ' + nf(m.roas) + 'x</b>, debajo del umbral de 5,0x') },
+      { cls: m.diagnostico.nivel, html: '<b>' + esc(m.diagnostico.texto) + '</b> (CPA del motor)' }
+    ]);
+    bloqueCampana('advantage', d.advantage);
+    bloqueCampana('remarketing', d.remarketing);
+  } else errores.push('informe de 7 días: ' + rep.reason.message);
+  if (sem.status === 'fulfilled') graficas(sem.value.serie || []);
+  else errores.push('histórico semanal: ' + sem.reason.message);
+  const ahora = new Date().toLocaleString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  document.getElementById('footer-time').textContent = ahora;
+  if (errores.length) { st.className = 'status err'; st.textContent = 'No se pudo cargar: ' + errores.join(' · '); }
+  else st.textContent = 'Actualizado ' + ahora + ' · datos en vivo de Meta Ads · gráficas: últimas ' + SEMANAS + ' semanas cerradas';
+}
+window.addEventListener('load', cargar);
+</script>
+</body>
+</html>
