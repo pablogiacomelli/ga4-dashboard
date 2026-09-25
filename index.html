@@ -1986,7 +1986,7 @@ function renderWk() {
   setText('wk-c1-read', r1);
   setText('wk-c2-read', 'Motor ' + wkContexto(col(x => x.motor.cpa), i, 'costo por compra', fu)
     + (s.advantage.cpa != null && s.remarketing.cpa != null ? ' Calentar (Advantage) costó ' + fu(s.advantage.cpa) + ' por compra; cerrar (Remarketing), ' + fu(s.remarketing.cpa) + '.' : ''));
-  setText('wk-c3-read', 'Pool ' + wkContexto(col(x => x.pool_vieron_60d), i, 'pool', fi) + ' Tráfico aportó ' + fi(s.trafico.lpv) + ' LPV a U$D ' + nfd(s.trafico.costo_lpv) + ' cada una.');
+  setText('wk-c3-read', 'Pool ' + wkContexto(col(x => x.pool_vieron_60d), i, 'pool', fi) + ' Tráfico aportó ' + fi(s.trafico.lpv) + ' LPV a U$D ' + (s.trafico.lpv > 0 ? nfd(s.trafico.gasto / s.trafico.lpv, 3) : '—') + ' cada una.');
   let r4 = 'Remarketing ' + wkContexto(col(x => x.remarketing.frecuencia), i, 'frecuencia', ff);
   if (frecRem != null && frecRem > 4.5) r4 += ' <b>Rompe el objetivo de 4,5</b>: el fondo se está saturando.';
   if (s.remarketing.frecuenciaAproximada || s.advantage.frecuenciaAproximada) r4 += ' (Hubo más de una campaña en la etapa: la frecuencia es aproximada.)';
