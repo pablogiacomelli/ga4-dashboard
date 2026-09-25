@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- MAHRA Analytics - build 2026-08-04 v2 - incluye fix de la pestana Trafico (TABS_ROAS) -->
+<!-- MAHRA Analytics - build 2026-09-25 - capa semanal (semana cerrada lun-dom, motor Adv+Rem, visitas calificadas) sobre n8n VPS -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -435,6 +435,71 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
   .tab-bar { padding: 0 1rem; overflow-x: auto; }
   .tab-btn { padding: 12px 13px; font-size: 10px; }
 }
+
+/* ===== Capa semanal (build 2026-09-25) =====
+   Paleta categorica validada para modo oscuro (pasa daltonismo): azul, naranja, aqua. */
+:root {
+  --s1: #3987e5;
+  --s2: #d95926;
+  --s3: #199e70;
+  --ref: #6c6b64;
+  --good: #3fa877;
+  --bad: #e66767;
+}
+.wk { margin-bottom: 2.5rem; }
+.wk-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.wk-eyebrow { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em; color: var(--text3); text-transform: uppercase; margin-bottom: 6px; }
+.wk-title { font-family: var(--font-display); font-size: 1.6rem; font-weight: 300; letter-spacing: -0.01em; }
+.wk-title span { color: var(--accent); font-style: italic; }
+.wk-sel { font-family: var(--font-mono); font-size: 11px; color: var(--text2); letter-spacing: 0.05em; display: flex; align-items: center; gap: 8px; }
+.wk-sel select { font-family: var(--font-mono); font-size: 12px; padding: 6px 10px; background: var(--bg3); color: var(--text); border: 1px solid var(--border2); border-radius: 3px; cursor: pointer; }
+.wk-status { font-family: var(--font-mono); font-size: 11px; color: var(--text3); padding: 8px 14px; background: var(--bg2); border: 1px solid var(--border); border-radius: 4px; margin-bottom: 1.25rem; }
+.wk-status.err { color: var(--bad); border-color: rgba(230,103,103,0.35); }
+.wk-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.75rem; }
+.wk-kpi { background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; padding: 1.1rem 1.25rem; min-width: 0; }
+.wk-kpi .kpi-value { font-size: 2.1rem; }
+.wk-kpi .wk-d { font-family: var(--font-mono); font-size: 11.5px; margin-top: 8px; }
+.wk-kpi .wk-ctx { font-family: var(--font-mono); font-size: 10.5px; color: var(--text3); margin-top: 3px; }
+.wk-up { color: var(--good); } .wk-down { color: var(--bad); } .wk-flat { color: var(--text3); }
+.wk-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem; }
+.wk-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; padding: 1.25rem 1.25rem 1rem; display: flex; flex-direction: column; min-width: 0; }
+.wk-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 4px; }
+.wk-card-title { font-family: var(--font-display); font-size: 1.15rem; font-weight: 400; }
+.wk-tag { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; padding: 3px 7px; border: 1px solid currentColor; border-radius: 2px; white-space: nowrap; }
+.wk-tag.motor { color: var(--s3); } .wk-tag.tope { color: var(--s1); } .wk-tag.todo { color: var(--text2); } .wk-tag.sitio { color: var(--accent); }
+.wk-q { font-size: 12.5px; color: var(--text2); margin-bottom: 12px; }
+.wk-chart { position: relative; height: 230px; }
+.wk-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+.wk-lg { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--text2); }
+.wk-sw { width: 15px; height: 3px; border-radius: 2px; flex: none; }
+.wk-sw.dash { height: 0; border-top: 2px dashed var(--ref); }
+.wk-read { margin-top: 10px; padding: 10px 12px; background: var(--bg3); border-left: 2px solid var(--border2); font-size: 12.5px; color: var(--text2); line-height: 1.55; }
+.wk-read b { color: var(--text); font-weight: 500; }
+.wk-table { margin-top: 1.25rem; }
+.wk-table summary, .detalle > summary { cursor: pointer; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text2); padding: 10px 0; list-style: none; }
+.wk-table summary::before, .detalle > summary::before { content: '▸ '; color: var(--accent); }
+.wk-table[open] summary::before, .detalle[open] > summary::before { content: '▾ '; }
+.wk-tscroll { overflow-x: auto; border: 1px solid var(--border); border-radius: 6px; background: var(--bg2); }
+.wk-tscroll table { border-collapse: collapse; width: 100%; min-width: 1100px; font-family: var(--font-mono); font-size: 11.5px; }
+.wk-tscroll th, .wk-tscroll td { padding: 7px 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+.wk-tscroll th { background: var(--bg3); color: var(--text2); font-weight: 500; font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase; }
+.wk-tscroll th:first-child, .wk-tscroll td:first-child { text-align: left; }
+.wk-tscroll tr.sel td { background: rgba(212,168,83,0.08); }
+.detalle { border-top: 1px solid var(--border); padding-top: 0.5rem; }
+.detalle > summary { font-size: 12px; padding: 14px 0; }
+.detalle-controls { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin: 0.5rem 0 1rem; }
+.detalle-controls .site-subtitle { margin-top: 0; }
+.detalle .tab-bar { padding: 0; margin-bottom: 1.5rem; background: transparent; }
+.kpi-sub { font-family: var(--font-mono); font-size: 10px; color: var(--text3); margin-top: 6px; }
+@media (max-width: 860px) {
+  .wk-grid { grid-template-columns: 1fr; }
+  .wk-kpis { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 430px) {
+  .wk-kpis { grid-template-columns: 1fr; }
+  .wk-chart { height: 205px; }
+  .wk-sel, .wk-sel select { width: 100%; }
+}
 </style>
 </head>
 <body>
@@ -447,8 +512,77 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
 <header class="site-header">
   <div>
     <div class="site-title">MAHRA <span>Analytics</span></div>
-    <div class="site-subtitle">TIENDA ONLINE · PROPERTY 363391300 · <span id="period-label">ÚLTIMOS 30 DÍAS</span></div>
+    <div class="site-subtitle">TIENDA ONLINE · GA4 363391300 · META U$D 668878759388250</div>
   </div>
+</header>
+
+<main class="main">
+
+  <section class="wk" id="wk">
+    <div class="wk-head">
+      <div>
+        <div class="wk-eyebrow">Semana cerrada · lunes a domingo</div>
+        <h2 class="wk-title" id="wk-title">Series semanales</h2>
+      </div>
+      <label class="wk-sel">SEMANA <select id="wk-select" onchange="wkSelect(+this.value)"></select></label>
+    </div>
+    <div class="wk-status" id="wk-status">Cargando series semanales…</div>
+    <div class="wk-kpis" id="wk-kpis"></div>
+    <div class="wk-grid">
+    <section class="wk-card">
+      <div class="wk-card-head"><h3 class="wk-card-title">Rentabilidad del motor</h3><span class="wk-tag motor">Medio + Fondo</span></div>
+      <p class="wk-q">ROAS de Advantage + Remarketing juntos. El combinado es el número de rentabilidad; las líneas por campaña son diagnóstico, no metas separadas.</p>
+      <div class="wk-chart"><canvas id="wk-c1" role="img" aria-label="Rentabilidad del motor"></canvas></div>
+      <div class="wk-legend"><span class="wk-lg"><i class="wk-sw" style="background:var(--s1)"></i>Motor (Adv + Rem)</span><span class="wk-lg"><i class="wk-sw" style="background:var(--s2)"></i>Advantage+</span><span class="wk-lg"><i class="wk-sw" style="background:var(--s3)"></i>Remarketing</span><span class="wk-lg"><i class="wk-sw dash"></i>Umbral 5,0x</span></div>
+      <p class="wk-read" id="wk-c1-read">—</p>
+    </section>
+    <section class="wk-card">
+      <div class="wk-card-head"><h3 class="wk-card-title">Costo por compra</h3><span class="wk-tag motor">Medio + Fondo</span></div>
+      <p class="wk-q">Dólares por compra web. Manda el costo del motor; la brecha muestra cuánto cuesta calentar contra cuánto cuesta cerrar.</p>
+      <div class="wk-chart"><canvas id="wk-c2" role="img" aria-label="Costo por compra"></canvas></div>
+      <div class="wk-legend"><span class="wk-lg"><i class="wk-sw" style="background:var(--s1)"></i>Motor (Adv + Rem)</span><span class="wk-lg"><i class="wk-sw" style="background:var(--s2)"></i>Advantage+</span><span class="wk-lg"><i class="wk-sw" style="background:var(--s3)"></i>Remarketing</span></div>
+      <p class="wk-read" id="wk-c2-read">—</p>
+    </section>
+    <section class="wk-card">
+      <div class="wk-card-head"><h3 class="wk-card-title">Tope del funnel</h3><span class="wk-tag tope">Adquisición</span></div>
+      <p class="wk-q">Visitas a la landing que trae Tráfico y el proxy del pool «vieron 60d» (LPV de las tres campañas). Mide si entra gente nueva, no si vende.</p>
+      <div class="wk-chart"><canvas id="wk-c3" role="img" aria-label="Tope del funnel"></canvas></div>
+      <div class="wk-legend"><span class="wk-lg"><i class="wk-sw" style="background:var(--s1)"></i>Pool «vieron 60d»</span><span class="wk-lg"><i class="wk-sw" style="background:var(--s2)"></i>LPV de Tráfico</span></div>
+      <p class="wk-read" id="wk-c3-read">—</p>
+    </section>
+    <section class="wk-card">
+      <div class="wk-card-head"><h3 class="wk-card-title">Saturación por etapa</h3><span class="wk-tag todo">Las tres</span></div>
+      <p class="wk-q">Frecuencia: cuántas veces ve el anuncio la misma persona. En Remarketing, subir con el alcance cayendo significa que el pool se achica.</p>
+      <div class="wk-chart"><canvas id="wk-c4" role="img" aria-label="Saturación por etapa"></canvas></div>
+      <div class="wk-legend"><span class="wk-lg"><i class="wk-sw" style="background:var(--s3)"></i>Remarketing</span><span class="wk-lg"><i class="wk-sw" style="background:var(--s2)"></i>Advantage+</span><span class="wk-lg"><i class="wk-sw" style="background:var(--s1)"></i>Tráfico</span><span class="wk-lg"><i class="wk-sw dash"></i>Objetivo Rem. 4,5</span></div>
+      <p class="wk-read" id="wk-c4-read">—</p>
+    </section>
+    <section class="wk-card">
+      <div class="wk-card-head"><h3 class="wk-card-title">Visitas calificadas → carrito</h3><span class="wk-tag sitio">Sitio</span></div>
+      <p class="wk-q">Agregados al carrito sobre visitas calificadas (sesiones totales menos las de la campaña Tráfico, que por diseño no compra en la primera visita).</p>
+      <div class="wk-chart"><canvas id="wk-c5" role="img" aria-label="Visitas calificadas → carrito"></canvas></div>
+      <div class="wk-legend"><span class="wk-lg"><i class="wk-sw" style="background:var(--s1)"></i>Carritos / visitas calificadas</span></div>
+      <p class="wk-read" id="wk-c5-read">—</p>
+    </section>
+    <section class="wk-card">
+      <div class="wk-card-head"><h3 class="wk-card-title">Checkout → venta</h3><span class="wk-tag sitio">Sitio</span></div>
+      <p class="wk-q">Compras sobre checkouts iniciados. Si cae mientras el carrito se sostiene, el problema está en el pago o el envío, no en el anuncio.</p>
+      <div class="wk-chart"><canvas id="wk-c6" role="img" aria-label="Checkout → venta"></canvas></div>
+      <div class="wk-legend"><span class="wk-lg"><i class="wk-sw" style="background:var(--s1)"></i>Ventas / checkouts</span></div>
+      <p class="wk-read" id="wk-c6-read">—</p>
+    </section>
+    </div>
+    <details class="wk-table"><summary>Ver la serie como tabla</summary>
+      <div class="wk-tscroll"><table id="wk-tbl"><thead><tr>
+        <th>Semana</th><th>Gasto total</th><th>ROAS motor</th><th>ROAS Adv</th><th>ROAS Rem</th><th>CPA motor</th><th>CPA Adv</th><th>CPA Rem</th><th>Compras motor</th><th>LPV Tráfico</th><th>Pool 60d</th><th>Frec. Rem</th><th>Frec. Adv</th><th>Frec. Tráf</th><th>Calif.→carrito</th><th>Checkout→venta</th><th>Conv. calificada</th>
+      </tr></thead><tbody></tbody></table></div>
+    </details>
+  </section>
+
+  <details class="detalle" id="detalle">
+    <summary>Detalle por rango de fechas · 7 pestañas</summary>
+    <div class="detalle-controls">
+      <div class="site-subtitle">RANGO: <span id="period-label">ÚLTIMOS 30 DÍAS</span></div>
   <div class="controls">
     <button class="preset-btn" onclick="setPreset(7,'7 DÍAS',this)">7D</button>
     <button class="preset-btn active" onclick="setPreset(30,'30 DÍAS',this)">30D</button>
@@ -459,9 +593,8 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
     <input type="date" id="end-date">
     <button class="load-btn" id="loadBtn" onclick="onCargar()">↻ CARGAR</button>
   </div>
-</header>
-
-<nav class="tab-bar">
+    </div>
+    <nav class="tab-bar">
   <button class="tab-btn active" onclick="switchTab('resumen',this)">Resumen general</button>
   <button class="tab-btn" onclick="switchTab('campanias',this)">UTM · Campañas</button>
   <button class="tab-btn" onclick="switchTab('anuncios',this)">UTM · Anuncios</button>
@@ -471,7 +604,6 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
   <button class="tab-btn" onclick="switchTab('trafico',this)">Tráfico</button>
 </nav>
 
-<main class="main">
 
   <div id="panel-resumen" class="tab-panel active">
 
@@ -485,7 +617,7 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
     <div class="kpi"><div class="kpi-label">Usuarios</div><div class="kpi-value" id="k-users">—</div></div>
     <div class="kpi"><div class="kpi-label">Ingresos ARS</div><div class="kpi-value accent" id="k-revenue">—</div></div>
     <div class="kpi"><div class="kpi-label">Transacciones</div><div class="kpi-value" id="k-trans">—</div></div>
-    <div class="kpi"><div class="kpi-label">Conversión</div><div class="kpi-value" id="k-conv">—</div></div>
+    <div class="kpi"><div class="kpi-label">Conversión calificada</div><div class="kpi-value" id="k-conv">—</div><div class="kpi-sub" id="k-conv-sub"></div></div>
     <div class="kpi"><div class="kpi-label">Ticket promedio</div><div class="kpi-value accent" id="k-aov">—</div></div>
   </div>
 
@@ -848,6 +980,8 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
       <div class="ai-content" id="ai-content-trf">Cargá los datos para generar el análisis automático.</div>
     </div>
   </div><!-- /panel-trafico -->
+
+  </details>
 
 </main>
 
@@ -1264,7 +1398,12 @@ function updateKPIs(ov) {
   document.getElementById('k-users').textContent = fmt(ov.totalUsers);
   document.getElementById('k-revenue').textContent = fmtM(ov.totalRevenue);
   document.getElementById('k-trans').textContent = fmt(ov.totalTransactions);
-  document.getElementById('k-conv').textContent = ov.conversionRate.toFixed(2) + '%';
+  // Titular sobre visitas calificadas (sin la campania Trafico), como en el informe de CRO.
+  const cc = ov.conversionRateCalificada;
+  document.getElementById('k-conv').textContent = (cc != null ? cc : ov.conversionRate).toFixed(2) + '%';
+  document.getElementById('k-conv-sub').textContent = cc != null
+    ? 'sobre ' + fmt(ov.visitasCalificadas) + ' visitas · total ' + ov.conversionRate.toFixed(2) + '%'
+    : 'sobre sesiones totales (sin dato de Tráfico)';
   document.getElementById('k-aov').textContent = fmtM(ov.avgOrderValue);
 }
 
@@ -1734,7 +1873,210 @@ function narrativeMeta() {
 
 // Antes esto mandaba '30daysAgo'/'today' mientras el boton 7D figuraba activo y los
 // inputs mostraban otro rango: tres cosas distintas al mismo tiempo.
-window.addEventListener('load', () => loadData(currentRange.start, currentRange.end));
+window.addEventListener('load', () => {
+  loadSemanal();
+  // El detalle arranca plegado: se carga recien la primera vez que se abre.
+  let detalleCargado = false;
+  document.getElementById('detalle').addEventListener('toggle', e => {
+    if (e.target.open && !detalleCargado) { detalleCargado = true; loadData(currentRange.start, currentRange.end); }
+  });
+});
+
+/* ===================== Capa semanal ===================== */
+const SEMANAL_WEBHOOK = 'https://n8n.mahra-ai.online/webhook/dashboard-semanal';
+const wk = { serie: [], sel: -1, charts: {} };
+const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const tokv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const nfd = (v, d = 2) => v == null ? '—' : v.toLocaleString('es-AR', { minimumFractionDigits: d, maximumFractionDigits: d });
+const nfi = v => v == null ? '—' : Math.round(v).toLocaleString('es-AR');
+
+function wkLabel(s, conAnio) {
+  const a = new Date(s.semana_inicio + 'T12:00:00'), b = new Date(s.semana_fin + 'T12:00:00');
+  const t = a.getMonth() === b.getMonth()
+    ? a.getDate() + '–' + b.getDate() + ' ' + MESES[b.getMonth()]
+    : a.getDate() + ' ' + MESES[a.getMonth()] + '–' + b.getDate() + ' ' + MESES[b.getMonth()];
+  return conAnio ? t + ' ' + b.getFullYear() : t;
+}
+
+async function loadSemanal() {
+  const st = document.getElementById('wk-status');
+  st.className = 'wk-status';
+  st.textContent = 'Cargando series semanales…';
+  try {
+    const d = await postJSON(SEMANAL_WEBHOOK, { semanas: 12 });
+    wk.serie = d.serie || [];
+    if (!wk.serie.length) throw new Error('El workflow no devolvió semanas');
+    wk.sel = wk.serie.length - 1;
+    const sel = document.getElementById('wk-select');
+    sel.innerHTML = wk.serie.map((s, i) => ({ s, i })).reverse()
+      .map(({ s, i }) => `<option value="${i}">${wkLabel(s, true)}</option>`).join('');
+    sel.value = String(wk.sel);
+    st.textContent = 'Meta Ads (U$D, atribución de la cuenta) + GA4 · ' + wk.serie.length + ' semanas cerradas · actualizado '
+      + new Date().toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    buildWkCharts();
+    renderWk();
+  } catch (e) {
+    st.className = 'wk-status err';
+    st.textContent = 'No se pudieron cargar las series semanales: ' + ((e && e.message) || 'error de conexión');
+    console.error(e);
+  }
+}
+
+function wkSelect(i) { wk.sel = i; renderWk(); }
+
+// Delta contra la semana anterior. betterHigh=false para costos y frecuencia.
+function wkDelta(cur, prev, betterHigh) {
+  if (cur == null || prev == null || prev === 0) return { t: 'sin comparativa', c: 'wk-flat' };
+  const p = (cur - prev) / Math.abs(prev) * 100;
+  const arrow = p > 0 ? '▲' : p < 0 ? '▼' : '=';
+  const good = betterHigh ? p > 0 : p < 0;
+  return { t: arrow + ' ' + Math.abs(p).toLocaleString('es-AR', { maximumFractionDigits: 1 }) + '% vs semana anterior', c: Math.abs(p) < 1 ? 'wk-flat' : (good ? 'wk-up' : 'wk-down') };
+}
+
+// Contexto de la serie: posicion en las N semanas y racha, para distinguir un mal dia de una tendencia.
+function wkContexto(vals, i, nombre, fmtv) {
+  const v = vals[i];
+  if (v == null) return 'Sin dato de ' + nombre + ' esta semana.';
+  const hasta = vals.slice(0, i + 1).filter(x => x != null);
+  const n = hasta.length;
+  const mayores = hasta.filter(x => x > v).length;
+  let txt = '<b>' + fmtv(v) + '</b>';
+  if (n >= 4) {
+    if (mayores === 0) txt += ', el máximo de las ' + n + ' semanas';
+    else if (mayores === n - 1) txt += ', el mínimo de las ' + n + ' semanas';
+    else {
+      const menores = hasta.filter(x => x < v).length;
+      if (mayores < menores) txt += ', el ' + (mayores + 1) + '.º más alto de ' + n;
+      else txt += ', el ' + (menores + 1) + '.º más bajo de ' + n;
+    }
+  }
+  let racha = 0, dir = 0;
+  for (let k = i; k > 0; k--) {
+    const a = vals[k], b = vals[k - 1];
+    if (a == null || b == null || a === b) break;
+    const dk = a > b ? 1 : -1;
+    if (dir === 0) dir = dk; else if (dk !== dir) break;
+    racha++;
+  }
+  if (racha >= 2) txt += '; lleva ' + racha + ' semanas ' + (dir > 0 ? 'subiendo' : 'bajando');
+  return txt + '.';
+}
+
+function renderWk() {
+  const S = wk.serie, i = wk.sel, s = S[i], p = S[i - 1] || null;
+  document.getElementById('wk-title').innerHTML = 'Semana <span>' + wkLabel(s, true) + '</span>';
+  const frecRem = s.remarketing.frecuencia;
+  const tiles = [
+    { lab: 'ROAS motor (Adv + Rem)', val: s.motor.roas == null ? '—' : nfd(s.motor.roas) + 'x', d: wkDelta(s.motor.roas, p && p.motor.roas, true), ctx: 'umbral 5,0x · gasto motor $' + nfd(s.motor.gasto) },
+    { lab: 'Costo por compra · motor', val: s.motor.cpa == null ? '—' : 'U$D ' + nfd(s.motor.cpa), d: wkDelta(s.motor.cpa, p && p.motor.cpa, false), ctx: nfi(s.motor.compras) + ' compras atribuidas por Meta' },
+    { lab: 'Pool «vieron 60d»', val: nfi(s.pool_vieron_60d), d: wkDelta(s.pool_vieron_60d, p && p.pool_vieron_60d, true), ctx: 'proxy: LPV Tráfico + Rem + Adv' },
+    { lab: 'Frecuencia Remarketing', val: nfd(frecRem), d: wkDelta(frecRem, p && p.remarketing.frecuencia, false), ctx: frecRem != null && frecRem > 4.5 ? '⚠ por encima del objetivo 4,5' : 'objetivo < 4,5' }
+  ];
+  document.getElementById('wk-kpis').innerHTML = tiles.map(t =>
+    `<div class="wk-kpi"><div class="kpi-label">${t.lab}</div><div class="kpi-value">${t.val}</div><div class="wk-d ${t.d.c}">${t.d.t}</div><div class="wk-ctx">${t.ctx}</div></div>`).join('');
+
+  const col = f => S.map(f);
+  const fx = v => nfd(v) + 'x', fu = v => 'U$D ' + nfd(v), fi = v => nfi(v), ff = v => nfd(v), fp = v => nfd(v) + '%';
+
+  let r1 = 'Motor ' + wkContexto(col(x => x.motor.roas), i, 'ROAS', fx);
+  const ra = s.advantage.roas, rm = s.motor.roas;
+  if (ra != null && rm != null && ra < 5 && rm >= 5) r1 += ' Advantage quedó en <b>' + fx(ra) + '</b>, debajo de 5, pero el motor rinde ' + fx(rm) + ': se evalúa el conjunto, no se recorta mirando solo su ROAS.';
+  else if (rm != null && rm < 5) r1 += ' <b>El motor está debajo del umbral de 5,0x.</b>';
+  setText('wk-c1-read', r1);
+  setText('wk-c2-read', 'Motor ' + wkContexto(col(x => x.motor.cpa), i, 'costo por compra', fu)
+    + (s.advantage.cpa != null && s.remarketing.cpa != null ? ' Calentar (Advantage) costó ' + fu(s.advantage.cpa) + ' por compra; cerrar (Remarketing), ' + fu(s.remarketing.cpa) + '.' : ''));
+  setText('wk-c3-read', 'Pool ' + wkContexto(col(x => x.pool_vieron_60d), i, 'pool', fi) + ' Tráfico aportó ' + fi(s.trafico.lpv) + ' LPV a U$D ' + nfd(s.trafico.costo_lpv) + ' cada una.');
+  let r4 = 'Remarketing ' + wkContexto(col(x => x.remarketing.frecuencia), i, 'frecuencia', ff);
+  if (frecRem != null && frecRem > 4.5) r4 += ' <b>Rompe el objetivo de 4,5</b>: el fondo se está saturando.';
+  if (s.remarketing.frecuenciaAproximada || s.advantage.frecuenciaAproximada) r4 += ' (Hubo más de una campaña en la etapa: la frecuencia es aproximada.)';
+  setText('wk-c4-read', r4);
+  setText('wk-c5-read', wkContexto(col(x => x.sitio.tasa_calificadas_carrito), i, 'la tasa', fp)
+    + ' ' + nfi(s.sitio.carritos) + ' carritos sobre ' + nfi(s.sitio.visitas_calificadas) + ' visitas calificadas (' + nfi(s.sitio.sesiones_trafico) + ' sesiones de Tráfico excluidas).');
+  setText('wk-c6-read', wkContexto(col(x => x.sitio.tasa_checkout_venta), i, 'la tasa', fp)
+    + ' ' + nfi(s.sitio.transacciones) + ' ventas sobre ' + nfi(s.sitio.checkouts) + ' checkouts. Conversión calificada de la semana: <b>' + fp(s.sitio.tasa_conversion_calificada) + '</b>.');
+
+  document.querySelector('#wk-tbl tbody').innerHTML = S.map((x, k) => ({ x, k })).reverse().map(({ x, k }) => `<tr${k === i ? ' class="sel"' : ''}>
+    <td>${wkLabel(x, true)}</td><td>$${nfd(x.gasto_total)}</td>
+    <td>${x.motor.roas == null ? '—' : fx(x.motor.roas)}</td><td>${x.advantage.roas == null ? '—' : fx(x.advantage.roas)}</td><td>${x.remarketing.roas == null ? '—' : fx(x.remarketing.roas)}</td>
+    <td>${x.motor.cpa == null ? '—' : '$' + nfd(x.motor.cpa)}</td><td>${x.advantage.cpa == null ? '—' : '$' + nfd(x.advantage.cpa)}</td><td>${x.remarketing.cpa == null ? '—' : '$' + nfd(x.remarketing.cpa)}</td>
+    <td>${nfi(x.motor.compras)}</td><td>${nfi(x.trafico.lpv)}</td><td>${nfi(x.pool_vieron_60d)}</td>
+    <td>${ff(x.remarketing.frecuencia)}</td><td>${ff(x.advantage.frecuencia)}</td><td>${ff(x.trafico.frecuencia)}</td>
+    <td>${fp(x.sitio.tasa_calificadas_carrito)}</td><td>${fp(x.sitio.tasa_checkout_venta)}</td><td>${fp(x.sitio.tasa_conversion_calificada)}</td>
+  </tr>`).join('');
+
+  Object.values(wk.charts).forEach(ch => {
+    ch.data.datasets.forEach(ds => { if (!ds._ref) ds.pointRadius = S.map((_, k) => k === i ? 4 : 0); });
+    ch.update('none');
+  });
+}
+
+// Linea vertical punteada en la semana elegida.
+const wkSelLine = {
+  id: 'wkSelLine',
+  afterDatasetsDraw(ch) {
+    if (wk.sel < 0) return;
+    const x = ch.scales.x.getPixelForValue(wk.sel), a = ch.chartArea, c = ch.ctx;
+    c.save(); c.strokeStyle = 'rgba(212,168,83,0.45)'; c.lineWidth = 1; c.setLineDash([2, 3]);
+    c.beginPath(); c.moveTo(x, a.top); c.lineTo(x, a.bottom); c.stroke(); c.restore();
+  }
+};
+
+function buildWkCharts() {
+  Object.values(wk.charts).forEach(ch => ch.destroy());
+  wk.charts = {};
+  const S = wk.serie, labels = S.map(s => wkLabel(s, false));
+  const line = (label, vals, colorVar, extra) => Object.assign({
+    label, data: vals, borderColor: tokv(colorVar), backgroundColor: tokv(colorVar),
+    borderWidth: 2, pointRadius: 0, pointHoverRadius: 5, pointHitRadius: 16, tension: 0.25, spanGaps: true
+  }, extra || {});
+  const ref = (label, value) => ({ label, data: S.map(() => value), borderColor: tokv('--ref'), borderWidth: 1.5, borderDash: [5, 4], pointRadius: 0, pointHitRadius: 0, tension: 0, _ref: true });
+  const opts = (fmtTip, fmtAxis) => ({
+    responsive: true, maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    layout: { padding: { top: 6, right: 8 } },
+    onClick: (e, els, ch) => {
+      const pts = ch.getElementsAtEventForMode(e, 'index', { intersect: false }, false);
+      if (pts.length) { wk.sel = pts[0].index; document.getElementById('wk-select').value = String(wk.sel); renderWk(); }
+    },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#1e1e1a', titleColor: '#f0ede8', bodyColor: '#9a9690', borderColor: 'rgba(255,255,255,0.12)', borderWidth: 1,
+        padding: 10, boxWidth: 9, boxHeight: 3, filter: it => !it.dataset._ref,
+        callbacks: { label: c => ' ' + c.dataset.label + ': ' + (c.parsed.y == null ? '—' : fmtTip(c.parsed.y)) }
+      }
+    },
+    scales: {
+      x: { grid: { display: false }, border: { color: 'rgba(255,255,255,0.07)' }, ticks: { color: '#5a5750', maxRotation: 0, autoSkipPadding: 10, font: { family: 'DM Mono', size: 10 } } },
+      y: { grid: { color: 'rgba(255,255,255,0.06)', drawTicks: false }, border: { display: false }, ticks: { color: '#5a5750', padding: 8, font: { family: 'DM Mono', size: 10 }, callback: fmtAxis } }
+    }
+  });
+  const mk = (id, datasets, o) => { wk.charts[id] = new Chart(document.getElementById(id), { type: 'line', data: { labels, datasets }, options: o, plugins: [wkSelLine] }); };
+  const col = f => S.map(f);
+  mk('wk-c1', [
+    line('Motor (Adv+Rem)', col(s => s.motor.roas), '--s1', { borderWidth: 2.5 }),
+    line('Advantage+', col(s => s.advantage.roas), '--s2'),
+    line('Remarketing', col(s => s.remarketing.roas), '--s3'),
+    ref('Umbral 5,0x', 5)
+  ], opts(v => nfd(v) + 'x', v => v + 'x'));
+  mk('wk-c2', [
+    line('Motor (Adv+Rem)', col(s => s.motor.cpa), '--s1', { borderWidth: 2.5 }),
+    line('Advantage+', col(s => s.advantage.cpa), '--s2'),
+    line('Remarketing', col(s => s.remarketing.cpa), '--s3')
+  ], opts(v => 'U$D ' + nfd(v), v => '$' + v));
+  mk('wk-c3', [
+    line('Pool «vieron 60d»', col(s => s.pool_vieron_60d), '--s1', { borderWidth: 2.5 }),
+    line('LPV de Tráfico', col(s => s.trafico.lpv), '--s2')
+  ], opts(v => nfi(v), v => (v / 1000).toLocaleString('es-AR') + 'k'));
+  mk('wk-c4', [
+    line('Remarketing', col(s => s.remarketing.frecuencia), '--s3', { borderWidth: 2.5 }),
+    line('Advantage+', col(s => s.advantage.frecuencia), '--s2'),
+    line('Tráfico', col(s => s.trafico.frecuencia), '--s1'),
+    ref('Objetivo 4,5', 4.5)
+  ], opts(v => nfd(v), v => v));
+  mk('wk-c5', [line('Carritos / visitas calificadas', col(s => s.sitio.tasa_calificadas_carrito), '--s1', { borderWidth: 2.5 })], opts(v => nfd(v) + '%', v => v + '%'));
+  mk('wk-c6', [line('Ventas / checkouts', col(s => s.sitio.tasa_checkout_venta), '--s1', { borderWidth: 2.5 })], opts(v => nfd(v) + '%', v => v + '%'));
+}
 </script>
 </body>
 </html>
