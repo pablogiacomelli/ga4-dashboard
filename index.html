@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- MAHRA Analytics - build 2026-09-25 - capa semanal (semana cerrada lun-dom, motor Adv+Rem, visitas calificadas) sobre n8n VPS -->
+<!-- MAHRA Analytics - build 2026-10-17 - pestaña Bots (estimacion por comportamiento, webhook ga4-bots) sobre n8n VPS -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -603,6 +603,7 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
   <button class="tab-btn" onclick="switchTab('roas',this)">ROAS</button>
   <button class="tab-btn" onclick="switchTab('mensajes',this)">Mensajes</button>
   <button class="tab-btn" onclick="switchTab('trafico',this)">Tráfico</button>
+  <button class="tab-btn" onclick="switchTab('bots',this)">Bots</button>
 </nav>
 
 
@@ -982,6 +983,87 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
     </div>
   </div><!-- /panel-trafico -->
 
+  <div id="panel-bots" class="tab-panel">
+    <div class="utm-head">
+      <div class="utm-title">Bots <span>Tráfico automatizado en GA4</span></div>
+      <div class="utm-meta" id="bots-meta">— sin cargar</div>
+    </div>
+
+    <div class="tab-note">GA4 solo descarta los bots conocidos (lista IAB) y no marca el resto, así que acá se estiman por comportamiento: muchas sesiones, casi sin interacción (menos de 10 s, una página) y cero ventas. Es un <strong>piso</strong>, no un conteo exacto. Los picos se separan en dos: si la interacción se mantiene normal es tráfico de campaña; si cae, es probable bot.</div>
+
+    <div class="kpi-grid" style="margin-bottom:1.5rem">
+      <div class="kpi"><div class="kpi-label">Sesiones</div><div class="kpi-value" id="bt-ses">—</div><div class="kpi-sub" id="bt-ses-sub"></div></div>
+      <div class="kpi"><div class="kpi-label">Con interacción</div><div class="kpi-value" id="bt-tasa">—</div><div class="kpi-sub" id="bt-tasa-sub"></div></div>
+      <div class="kpi"><div class="kpi-label">Bots estimados</div><div class="kpi-value accent" id="bt-est">—</div><div class="kpi-sub" id="bt-est-sub"></div></div>
+      <div class="kpi"><div class="kpi-label">Sesiones limpias</div><div class="kpi-value" id="bt-limpias">—</div><div class="kpi-sub" id="bt-limpias-sub"></div></div>
+      <div class="kpi"><div class="kpi-label">Días con pico</div><div class="kpi-value" id="bt-picos">—</div><div class="kpi-sub" id="bt-picos-sub"></div></div>
+    </div>
+
+    <div class="chart-card" style="margin-bottom:2rem">
+      <div class="chart-label">Sesiones por día — con y sin interacción · los puntos marcan picos</div>
+      <div class="chart-wrap" style="height:240px">
+        <canvas id="botsChart" role="img" aria-label="Sesiones diarias con y sin interacción">Sesiones por día</canvas>
+      </div>
+    </div>
+
+    <div class="ai-section" style="margin-bottom:2rem">
+      <div class="ai-header">
+        <div class="ai-tag">▸ Lectura · <span id="ai-period-bots">—</span></div>
+        <button class="ai-refresh" onclick="loadBots()">↻ RECARGAR</button>
+      </div>
+      <div class="ai-content" id="ai-content-bots">Cargá los datos para ver la lectura.</div>
+    </div>
+
+    <div class="chart-card" style="margin-bottom:2rem">
+      <div class="chart-label">Por fuente / medio — sospechosas primero</div>
+      <div class="table-scroll">
+        <table class="pages-table">
+          <thead><tr>
+            <th>Fuente / medio</th>
+            <th style="text-align:right">Sesiones</th>
+            <th style="text-align:right">Sin interacción</th>
+            <th style="text-align:right">Interacción</th>
+            <th style="text-align:right">Ventas</th>
+            <th>Señal</th>
+          </tr></thead>
+          <tbody id="bots-fuentes"><tr><td colspan="6" style="text-align:center;color:#5a5750;padding:2rem;font-family:'DM Mono',monospace;font-size:11px">SIN CARGAR</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="charts-grid-2" style="margin-bottom:2rem">
+      <div class="chart-card">
+        <div class="chart-label">Por país</div>
+        <div class="table-scroll">
+          <table class="pages-table">
+            <thead><tr>
+              <th>País</th>
+              <th style="text-align:right">Sesiones</th>
+              <th style="text-align:right">Interacción</th>
+              <th style="text-align:right">Ventas</th>
+              <th>Señal</th>
+            </tr></thead>
+            <tbody id="bots-paises"><tr><td colspan="5" style="text-align:center;color:#5a5750;padding:2rem;font-family:'DM Mono',monospace;font-size:11px">SIN CARGAR</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-label">Por navegador · sistema · dispositivo</div>
+        <div class="table-scroll">
+          <table class="pages-table">
+            <thead><tr>
+              <th>Tecnología</th>
+              <th style="text-align:right">Sesiones</th>
+              <th style="text-align:right">Interacción</th>
+              <th>Señal</th>
+            </tr></thead>
+            <tbody id="bots-tec"><tr><td colspan="4" style="text-align:center;color:#5a5750;padding:2rem;font-family:'DM Mono',monospace;font-size:11px">SIN CARGAR</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div><!-- /panel-bots -->
+
   </details>
 
 </main>
@@ -1065,6 +1147,7 @@ let activeTab = 'resumen';
 let utmCache = null;
 let metaCache = null;
 let roasCache = null;
+let botsCache = null;
 let currentRange = {
   start: document.getElementById('start-date').value,
   end: document.getElementById('end-date').value
@@ -1117,6 +1200,7 @@ function setPreset(days, label, btn) {
   utmCache = null;
   metaCache = null;
   roasCache = null;
+  botsCache = null;
   refresh();
 }
 
@@ -1128,6 +1212,7 @@ function onCargar() {
   utmCache = null;
   metaCache = null;
   roasCache = null;
+  botsCache = null;
   refresh();
 }
 
@@ -1141,6 +1226,7 @@ function refresh() {
   else if (activeTab === 'meta') loadMeta();
   else if (TABS_ROAS.includes(activeTab)) loadROAS();
   else if (activeTab === 'campanias' || activeTab === 'anuncios') loadUTM();
+  else if (activeTab === 'bots') loadBots();
 }
 
 function switchTab(name, btn) {
@@ -1152,6 +1238,7 @@ function switchTab(name, btn) {
   if ((name === 'campanias' || name === 'anuncios') && !utmCache) loadUTM();
   if (name === 'meta' && !metaCache) loadMeta();
   if (TABS_ROAS.includes(name) && !roasCache) loadROAS();
+  if (name === 'bots' && !botsCache) loadBots();
 }
 
 function esc(s) {
@@ -1884,6 +1971,115 @@ window.addEventListener('load', () => {
 });
 
 /* ===================== Capa semanal ===================== */
+
+/* ---- Bots: estimacion por comportamiento (workflow coKTkwRksjFF5pYE) ---- */
+const BOTS_WEBHOOK = 'https://n8n.mahra-ai.online/webhook/ga4-bots';
+
+function botTag(r) {
+  if (r.sospechoso) return `<span class="bounce-tag b-bad">${esc(r.motivo)}</span>`;
+  return '<span class="bounce-tag b-good">normal</span>';
+}
+function pctTag(v) {
+  const cls = v >= 45 ? 'b-good' : (v >= 25 ? 'b-mid' : 'b-bad');
+  return `<span class="bounce-tag ${cls}">${String(v).replace('.', ',')}%</span>`;
+}
+function fechaCorta(d) { return d ? d.slice(6, 8) + '/' + d.slice(4, 6) : ''; }
+
+async function loadBots() {
+  const overlay = document.getElementById('loadingOverlay');
+  const txt = overlay.querySelector('.loading-text');
+  const prev = txt.textContent;
+  txt.textContent = 'ANALIZANDO BOTS';
+  overlay.classList.add('show');
+  try {
+    const d = await postJSON(BOTS_WEBHOOK, { startDate: currentRange.start, endDate: currentRange.end });
+    botsCache = d;
+    renderBots(d);
+  } catch (e) {
+    setText('ai-content-bots', esc((e && e.message) || 'Error al conectar con el servidor.'));
+    setText('bots-meta', 'ERROR AL CARGAR');
+    console.error(e);
+  } finally {
+    overlay.classList.remove('show');
+    txt.textContent = prev;
+  }
+}
+
+function renderBots(d) {
+  const t = d.totales || {}, e = d.estimacion || {};
+  const coma = v => String(v == null ? '—' : v).replace('.', ',');
+  setText('bt-ses', fmt(t.sesiones || 0));
+  setText('bt-ses-sub', fmt(t.usuarios || 0) + ' usuarios');
+  setText('bt-tasa', coma(t.tasaInteraccion) + '%');
+  setText('bt-tasa-sub', fmt(t.sinInteraccion || 0) + ' sin interacción');
+  setText('bt-est', fmt(e.sesiones || 0));
+  setText('bt-est-sub', coma(e.pct) + '% del total · piso');
+  setText('bt-limpias', fmt(e.sesionesLimpias || 0));
+  setText('bt-limpias-sub', '≈ ' + fmt(e.usuariosLimpiosAprox || 0) + ' usuarios');
+  const picos = d.picos || [];
+  const nBot = picos.filter(p => p.tipoPico === 'bots probable').length;
+  setText('bt-picos', fmt(picos.length));
+  setText('bt-picos-sub', nBot + ' de bots · ' + (picos.length - nBot) + ' de campaña');
+  setPeriodSpan('ai-period-bots');
+  setText('bots-meta', fmtPeriod() + ' · GA4 363391300');
+  setText('ai-content-bots', (d.hallazgos || []).map(h => '▸ ' + esc(h)).join('<br><br>'));
+
+  const filas = (arr, cols, fn) => arr.length ? arr.map(fn).join('') : utmMsg(cols, 'SIN DATOS', '#5a5750');
+  setText('bots-fuentes', filas(d.fuentes || [], 6, r => `<tr>
+    <td>${esc(r.sessionSourceMedium)}</td>
+    <td style="text-align:right">${fmt(r.sessions)}</td>
+    <td style="text-align:right">${fmt(r.sinInteraccion)}</td>
+    <td style="text-align:right">${pctTag(r.tasaInteraccion)}</td>
+    <td style="text-align:right">${fmt(r.transactions)}</td>
+    <td>${botTag(r)}</td></tr>`));
+  setText('bots-paises', filas((d.paises || []).slice(0, 15), 5, r => `<tr>
+    <td>${esc(r.country)}</td>
+    <td style="text-align:right">${fmt(r.sessions)}</td>
+    <td style="text-align:right">${pctTag(r.tasaInteraccion)}</td>
+    <td style="text-align:right">${fmt(r.transactions)}</td>
+    <td>${botTag(r)}</td></tr>`));
+  setText('bots-tec', filas((d.tecnologia || []).slice(0, 15), 4, r => `<tr>
+    <td>${esc(r.browser)} · ${esc(r.operatingSystem)} · ${esc(r.deviceCategory)}</td>
+    <td style="text-align:right">${fmt(r.sessions)}</td>
+    <td style="text-align:right">${pctTag(r.tasaInteraccion)}</td>
+    <td>${botTag(r)}</td></tr>`));
+
+  const serie = d.serie || [];
+  if (charts.bots) charts.bots.destroy();
+  const radio = serie.map(r => r.pico ? 5 : 0);
+  const colorPico = serie.map(r => r.tipoPico === 'bots probable' ? '#e07060' : '#d4a853');
+  charts.bots = new Chart(document.getElementById('botsChart'), {
+    type: 'line',
+    data: {
+      labels: serie.map(r => fechaCorta(r.date)),
+      datasets: [
+        { label: 'Con interacción', data: serie.map(r => r.engagedSessions), borderColor: '#8fbe9e', backgroundColor: 'rgba(143,190,158,0.10)', fill: true, tension: 0.35, pointRadius: 0, borderWidth: 1.5 },
+        { label: 'Sin interacción', data: serie.map(r => r.sinInteraccion), borderColor: '#9a9690', borderDash: [4, 3], fill: false, tension: 0.35, pointRadius: 0, borderWidth: 1.2 },
+        { label: 'Total', data: serie.map(r => r.sessions), borderColor: '#d4a853', fill: false, tension: 0.35, borderWidth: 1.5, pointRadius: radio, pointHoverRadius: 6, pointBackgroundColor: colorPico, pointBorderColor: colorPico }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: true, labels: { color: '#9a9690', font: { family: 'DM Mono', size: 10 }, boxWidth: 10 } },
+        tooltip: { callbacks: {
+          label: ctx => ' ' + ctx.dataset.label + ': ' + fmt(ctx.parsed.y),
+          afterBody: items => {
+            const r = serie[items[0].dataIndex];
+            if (!r || !r.pico) return '';
+            return 'Pico: ' + r.tipoPico + (r.canalPico ? ' · ' + r.canalPico + ' +' + fmt(r.extraCanal) : '');
+          }
+        } }
+      },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#5a5750', font: { family: 'DM Mono', size: 10 }, maxTicksLimit: 12 } },
+        y: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#5a5750', font: { family: 'DM Mono', size: 10 } } }
+      }
+    }
+  });
+}
+
 const SEMANAL_WEBHOOK = 'https://n8n.mahra-ai.online/webhook/dashboard-semanal';
 const wk = { serie: [], sel: -1, charts: {} };
 const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
