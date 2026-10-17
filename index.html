@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- MAHRA Analytics - build 2026-10-17 - pestaña Bots (estimacion por comportamiento, webhook ga4-bots) sobre n8n VPS -->
+<!-- MAHRA Analytics - build 2026-10-17 - pestaña Bots (estimacion + detector GTM bot_check, webhook ga4-bots) sobre n8n VPS -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -1015,6 +1015,21 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
     </div>
 
     <div class="chart-card" style="margin-bottom:2rem">
+      <div class="chart-label">Detector en la tienda — medición directa (GTM, desde el 17/10/2026)</div>
+      <div class="tab-note" style="margin:0.75rem 0 1.25rem">Una etiqueta de Tag Manager controla cada sesión: navegador automatizado, sin idiomas, sin pantalla, zona horaria fuera de América y si en 15 segundos hubo algún movimiento, scroll o toque. Manda el resultado a GA4 como <strong>bot_check</strong>. A diferencia de la estimación de arriba, esto mide sesión por sesión. GA4 tarda unas horas en mostrar los eventos.</div>
+      <div class="kpi-grid" style="margin-bottom:1.25rem">
+        <div class="kpi"><div class="kpi-label">Sesiones controladas</div><div class="kpi-value" id="dt-total">—</div><div class="kpi-sub" id="dt-desde"></div></div>
+        <div class="kpi"><div class="kpi-label">Humano</div><div class="kpi-value" id="dt-humano">—</div><div class="kpi-sub" id="dt-humano-sub"></div></div>
+        <div class="kpi"><div class="kpi-label">Sospechoso</div><div class="kpi-value accent" id="dt-sosp">—</div><div class="kpi-sub" id="dt-sosp-sub"></div></div>
+        <div class="kpi"><div class="kpi-label">Bot</div><div class="kpi-value" id="dt-bot" style="color:var(--danger)">—</div><div class="kpi-sub" id="dt-bot-sub"></div></div>
+      </div>
+      <div class="chart-wrap" style="height:200px">
+        <canvas id="detectorChart" role="img" aria-label="Sesiones por día según el detector">Detector por día</canvas>
+      </div>
+      <div id="dt-vacio" style="display:none;text-align:center;color:#5a5750;padding:1rem;font-family:'DM Mono',monospace;font-size:11px"></div>
+    </div>
+
+    <div class="chart-card" style="margin-bottom:2rem">
       <div class="chart-label">Por fuente / medio — sospechosas primero</div>
       <div class="table-scroll">
         <table class="pages-table">
@@ -2005,6 +2020,52 @@ async function loadBots() {
   }
 }
 
+
+function renderDetector(det) {
+  const d = det || {};
+  const medidas = (d.humano || 0) + (d.sospechoso || 0) + (d.bot || 0);
+  const pct = n => medidas > 0 ? (Math.round(n / medidas * 1000) / 10).toString().replace('.', ',') + '%' : '—';
+  setText('dt-total', medidas > 0 ? fmt(medidas) : '—');
+  setText('dt-desde', d.desde ? 'desde el ' + fechaCorta(d.desde) : 'sin datos todavía');
+  setText('dt-humano', fmt(d.humano || 0));
+  setText('dt-humano-sub', pct(d.humano || 0));
+  setText('dt-sosp', fmt(d.sospechoso || 0));
+  setText('dt-sosp-sub', pct(d.sospechoso || 0) + ' · sin interacción en 15 s');
+  setText('dt-bot', fmt(d.bot || 0));
+  setText('dt-bot-sub', pct(d.bot || 0) + ' · navegador automatizado');
+  const vacio = document.getElementById('dt-vacio');
+  if (charts.detector) { charts.detector.destroy(); charts.detector = null; }
+  const serie = d.serie || [];
+  if (!serie.length) {
+    vacio.style.display = 'block';
+    vacio.textContent = d.disponible === false
+      ? 'GA4 todavía no devuelve la dimensión bot_level (puede tardar 24-48 h desde el 17/10/2026).'
+      : 'Sin sesiones controladas en este rango. El detector empezó a medir el 17/10/2026 y GA4 tarda unas horas en mostrarlas.';
+    return;
+  }
+  vacio.style.display = 'none';
+  const ds = (label, key, color) => ({ label, data: serie.map(r => r[key] || 0), backgroundColor: color, borderWidth: 0, stack: 'n' });
+  charts.detector = new Chart(document.getElementById('detectorChart'), {
+    type: 'bar',
+    data: {
+      labels: serie.map(r => fechaCorta(r.date)),
+      datasets: [ds('Humano', 'humano', '#8fbe9e'), ds('Sospechoso', 'sospechoso', '#d4a853'), ds('Bot', 'bot', '#e07060')]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: true, labels: { color: '#9a9690', font: { family: 'DM Mono', size: 10 }, boxWidth: 10 } },
+        tooltip: { callbacks: { label: ctx => ' ' + ctx.dataset.label + ': ' + fmt(ctx.parsed.y) } }
+      },
+      scales: {
+        x: { stacked: true, grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#5a5750', font: { family: 'DM Mono', size: 10 } } },
+        y: { stacked: true, grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#5a5750', font: { family: 'DM Mono', size: 10 } } }
+      }
+    }
+  });
+}
+
 function renderBots(d) {
   const t = d.totales || {}, e = d.estimacion || {};
   const coma = v => String(v == null ? '—' : v).replace('.', ',');
@@ -2023,6 +2084,7 @@ function renderBots(d) {
   setPeriodSpan('ai-period-bots');
   setText('bots-meta', fmtPeriod() + ' · GA4 363391300');
   setText('ai-content-bots', (d.hallazgos || []).map(h => '▸ ' + esc(h)).join('<br><br>'));
+  renderDetector(d.detector);
 
   const filas = (arr, cols, fn) => arr.length ? arr.map(fn).join('') : utmMsg(cols, 'SIN DATOS', '#5a5750');
   setText('bots-fuentes', filas(d.fuentes || [], 6, r => `<tr>
